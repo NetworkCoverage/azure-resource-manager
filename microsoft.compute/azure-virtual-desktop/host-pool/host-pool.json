@@ -178,7 +178,7 @@
             "tags": {
                 "environment": "prod",
                 "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), variables('customerShortName'), json('null'))]"
+                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
             },
             "properties": {
                 "features": {
@@ -204,7 +204,7 @@
             "tags": {
                 "environment": "prod",
                 "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), variables('customerShortName'), json('null'))]"
+                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
             },
             "properties": {
                 "friendlyName": "[parameters('hostpoolFriendlyName')]",
@@ -244,7 +244,7 @@
             "tags": {
                 "environment": "prod",
                 "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), variables('customerShortName'), json('null'))]"
+                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
             },
             "properties": {
                 "hostpoolarmpath": "[resourceId('Microsoft.DesktopVirtualization/hostpools/', parameters('hostpoolName'))]",
@@ -279,7 +279,7 @@
             "tags": {
                 "environment": "prod",
                 "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), variables('customerShortName'), json('null'))]"
+                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
             },
             "properties": {
                 "applicationGroupReferences": [
