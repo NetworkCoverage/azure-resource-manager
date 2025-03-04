@@ -3,10 +3,11 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "isManagementHostPool": {
-            "type": "string",
+            "type": "bool",
             "metadata": {
                 "description": "Indicates whether the Azure AVD host pool is designated for management purposes. Set to true if the host pool is intended for administrative use, otherwise false."
-            }
+            },
+            "defaultValue": false
         },
         "customerShortName": {
             "type": "string",
