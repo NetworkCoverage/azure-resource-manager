@@ -213,6 +213,13 @@
     "functions": [],
     "variables": {
         "customerShortName": "[if(parameters('isManagementHostPool'), 'shared', parameters('customerShortName'))]",
+        "requiredTags": {
+            "environment": "prod",
+            "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]"
+        },
+        "nonManagementTag": {
+            "customer": "[variables('customerShortName')]"
+        },
         "vmTemplate": [
             {
                 "domain": "[if(not(equals(parameters('domainFqdn'), '')), parameters('domainFqdn'), '')]",
@@ -285,11 +292,7 @@
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2022-11-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "environment": "prod",
-                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
-            },
+            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "copy": {
                 "name": "rdsh-nic-loop",
                 "count": "[parameters('vmNumberOfInstances')]"
@@ -314,11 +317,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2023-07-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "environment": "prod",
-                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
-            },
+            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "copy": {
                 "name": "rdsh-vm-loop",
                 "count": "[parameters('vmNumberOfInstances')]"
@@ -451,5 +450,14 @@
             ]
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "vmTemplate": {
+            "type": "string",
+            "value": "[variables('vmTemplate')]"
+        },
+        "vmName": {
+            "type": "array",
+            "value": "[variables('vmName')]"
+        }
+    }
 }

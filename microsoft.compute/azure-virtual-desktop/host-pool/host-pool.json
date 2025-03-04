@@ -119,6 +119,13 @@
     },
     "variables": {
         "customerShortName": "[if(parameters('isManagementHostPool'), 'shared', parameters('customerShortName'))]",
+        "requiredTags": {
+            "environment": "prod",
+            "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]"
+        },
+        "nonManagementTag": {
+            "customer": "[variables('customerShortName')]"
+        },
         "loadBalancerType": "[if(equals(parameters('hostpoolType'), 'Personal'),'Persistent', parameters('loadBalancerType'))]",
         "hostpoolDiagnosticSettingsLogCategories": [
             "Checkpoint",
@@ -175,11 +182,7 @@
             "type": "Microsoft.OperationalInsights/workspaces",
             "apiVersion": "2023-09-01",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "environment": "prod",
-                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
-            },
+            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "properties": {
                 "features": {
                     "enableLogAccessUsingOnlyResourcePermissions": true
@@ -201,11 +204,7 @@
             "type": "Microsoft.DesktopVirtualization/hostPools",
             "apiVersion": "2024-01-16-preview",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "environment": "prod",
-                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
-            },
+            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "properties": {
                 "friendlyName": "[parameters('hostpoolFriendlyName')]",
                 "description": "[parameters('hostpoolDescription')]",
@@ -241,11 +240,7 @@
             "type": "Microsoft.DesktopVirtualization/applicationgroups",
             "apiVersion": "2024-01-16-preview",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "environment": "prod",
-                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
-            },
+            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "properties": {
                 "hostpoolarmpath": "[resourceId('Microsoft.DesktopVirtualization/hostpools/', parameters('hostpoolName'))]",
                 "friendlyName": "Default Desktop",
@@ -276,11 +271,7 @@
             "type": "Microsoft.DesktopVirtualization/workspaces",
             "apiVersion": "2024-01-16-preview",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "environment": "prod",
-                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
-                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
-            },
+            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "properties": {
                 "applicationGroupReferences": [
                     "[resourceId('Microsoft.DesktopVirtualization/applicationgroups', concat(parameters('hostpoolName'), '-dag'))]"
