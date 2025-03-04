@@ -12,8 +12,9 @@
         "customerShortName": {
             "type": "string",
             "metadata": {
-                "description": "The abbreviated name of the customer"
-            }
+                "description": "(Required when isManagementHostPool = false) The abbreviated name of the customer"
+            },
+            "defaultValue": ""
         },
         "hostPoolName": {
             "type": "string",
