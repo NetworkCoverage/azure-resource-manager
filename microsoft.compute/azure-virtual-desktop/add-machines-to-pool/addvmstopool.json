@@ -2,7 +2,14 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-         "customerShortName": {
+        "isManagementHostPool": {
+            "type": "bool",
+            "metadata": {
+                "description": "Indicates whether the Azure AVD host pool is designated for management purposes. Set to true if the host pool is intended for administrative use, otherwise false."
+            },
+            "defaultValue": false
+        },
+        "customerShortName": {
             "type": "string",
             "metadata": {
                 "description": "The abbreviated name of the customer"
@@ -41,6 +48,13 @@
                 "CustomImage",
                 "Gallery"
             ]
+        },
+        "vmGalleryImageHasPlan": {
+            "type": "bool",
+            "metadata": {
+                "description": "Whether the VM image has a plan or not"
+            },
+            "defaultValue": false
         },
         "vmGalleryImageOffer": {
             "type": "string",
@@ -197,6 +211,7 @@
     },
     "functions": [],
     "variables": {
+        "customerShortName": "[if(parameters('isManagementHostPool'), 'shared', parameters('customerShortName'))]",
         "vmTemplate": [
             {
                 "domain": "[if(not(equals(parameters('domainFqdn'), '')), parameters('domainFqdn'), '')]",
@@ -242,7 +257,7 @@
             "publisher": "[parameters('vmGalleryImagePublisher')]",
             "product": "[parameters('vmGalleryImageOffer')]"
         },
-        "vmPlan": "[if(or(variables('planInfoEmpty'), equals(parameters('vmImageType'), 'CustomImage')), json('null'), variables('marketplacePlan'))]",
+        "vmPlan": "[if(or(variables('planInfoEmpty'), equals(parameters('vmImageType'), 'CustomImage'), not(parameters('vmGalleryImageHasPlan'))), json('null'), variables('marketplacePlan'))]",
         "vmGalleryImageReference": {
             "publisher": "[parameters('vmGalleryImagePublisher')]",
             "offer": "[parameters('vmGalleryImageOffer')]",
@@ -271,8 +286,8 @@
             "location": "[resourceGroup().location]",
             "tags": {
                 "environment": "prod",
-                "application": "customer",
-                "customer": "[parameters('customerShortName')]"
+                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
+                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
             },
             "copy": {
                 "name": "rdsh-nic-loop",
@@ -300,8 +315,8 @@
             "location": "[resourceGroup().location]",
             "tags": {
                 "environment": "prod",
-                "application": "customer",
-                "customer": "[parameters('customerShortName')]"
+                "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]",
+                "customer": "[if(parameters('isManagementHostPool'), json('null'), variables('customerShortName'))]"
             },
             "copy": {
                 "name": "rdsh-vm-loop",
@@ -313,7 +328,7 @@
             "identity": {
                 "type": "[if(parameters('entraIdJoin'), 'SystemAssigned', 'None')]"
             },
-            //"plan": "[variables('vmPlan')]", fix plan not needed by adding plan parameter
+            "plan": "[variables('vmPlan')]",
             "properties": {
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
