@@ -120,7 +120,8 @@
                 "Standard_LRS" ],
             "metadata": {
             "description": "The VM disk type for the VM: HDD or SSD."
-            }
+            },
+            "defaultValue": "Premium_LRS"
         },        
         "vmDiskSizeGB": {
             "type": "int",
@@ -453,7 +454,7 @@
     "outputs": {
         "vmTemplate": {
             "type": "string",
-            "value": "[variables('vmTemplate')]"
+            "value": "[string(variables('vmTemplate'))]"
         },
         "vmName": {
             "type": "array",
