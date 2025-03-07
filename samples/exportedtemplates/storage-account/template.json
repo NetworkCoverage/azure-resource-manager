@@ -1,0 +1,260 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"
+        },
+        "storageAccountName": {
+            "type": "string"
+        },
+        "accountType": {
+            "type": "string"
+        },
+        "kind": {
+            "type": "string"
+        },
+        "minimumTlsVersion": {
+            "type": "string"
+        },
+        "supportsHttpsTrafficOnly": {
+            "type": "bool"
+        },
+        "allowBlobPublicAccess": {
+            "type": "bool"
+        },
+        "allowSharedKeyAccess": {
+            "type": "bool"
+        },
+        "publicNetworkAccess": {
+            "type": "string"
+        },
+        "allowCrossTenantReplication": {
+            "type": "bool"
+        },
+        "networkAclsBypass": {
+            "type": "string"
+        },
+        "networkAclsDefaultAction": {
+            "type": "string"
+        },
+        "networkAclsIpRules": {
+            "type": "array"
+        },
+        "networkAclsVirtualNetworkRules": {
+            "type": "array"
+        },
+        "keySource": {
+            "type": "string"
+        },
+        "encryptionEnabled": {
+            "type": "bool"
+        },
+        "keyTypeForTableAndQueueEncryption": {
+            "type": "string"
+        },
+        "infrastructureEncryptionEnabled": {
+            "type": "bool"
+        },
+        "isShareSoftDeleteEnabled": {
+            "type": "bool"
+        },
+        "shareSoftDeleteRetentionDays": {
+            "type": "int"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "apiVersion": "2018-05-01",
+            "type": "Microsoft.Resources/deployments",
+            "name": "virtualNetworks_0.8522597343607292",
+            "subscriptionId": "b27f2238-8a1b-40b4-8925-3a0c785fcdcc",
+            "resourceGroup": "c5mi-ugv-prod-rg-1",
+            "dependsOn": [],
+            "resources": [],
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2024-01-01",
+                            "name": "c5mi-ugv-vnet-1",
+                            "type": "Microsoft.Network/virtualNetworks",
+                            "location": "usgovvirginia",
+                            "properties": {
+                                "provisioningState": "Succeeded",
+                                "resourceGuid": "818db981-1622-4383-a31b-d3dec182ed2b",
+                                "addressSpace": {
+                                    "addressPrefixes": [
+                                        "172.17.0.0/16"
+                                    ]
+                                },
+                                "subnets": [
+                                    {
+                                        "name": "c5mi-ugv-snet-1",
+                                        "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/c5mi-ugv-prod-rg-1/providers/Microsoft.Network/virtualNetworks/c5mi-ugv-vnet-1/subnets/c5mi-ugv-snet-1",
+                                        "etag": "W/\"f3c48136-e743-49b9-be2e-b1c35c4ebfeb\"",
+                                        "properties": {
+                                            "provisioningState": "Succeeded",
+                                            "addressPrefix": "172.17.0.0/24",
+                                            "routeTable": {
+                                                "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/shared-ugv-rg-1/providers/Microsoft.Network/routeTables/shared-ugv-rt-1"
+                                            },
+                                            "ipConfigurations": [
+                                                {
+                                                    "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/c5mi-ugv-prod-rg-1/providers/Microsoft.Network/networkInterfaces/avd-goldimage-vm180/ipConfigurations/ipconfig1"
+                                                }
+                                            ],
+                                            "delegations": [],
+                                            "privateEndpointNetworkPolicies": "Disabled",
+                                            "privateLinkServiceNetworkPolicies": "Enabled",
+                                            "serviceEndpoints": [
+                                                {
+                                                    "service": "Microsoft.Storage"
+                                                }
+                                            ]
+                                        },
+                                        "type": "Microsoft.Network/virtualNetworks/subnets"
+                                    },
+                                    {
+                                        "name": "c5mi-ugv-snet-2",
+                                        "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/c5mi-ugv-prod-rg-1/providers/Microsoft.Network/virtualNetworks/c5mi-ugv-vnet-1/subnets/c5mi-ugv-snet-2",
+                                        "etag": "W/\"f3c48136-e743-49b9-be2e-b1c35c4ebfeb\"",
+                                        "properties": {
+                                            "provisioningState": "Succeeded",
+                                            "addressPrefix": "172.17.1.0/24",
+                                            "routeTable": {
+                                                "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/shared-ugv-rg-1/providers/Microsoft.Network/routeTables/shared-ugv-rt-1"
+                                            },
+                                            "delegations": [],
+                                            "privateEndpointNetworkPolicies": "Disabled",
+                                            "privateLinkServiceNetworkPolicies": "Enabled",
+                                            "serviceEndpoints": [
+                                                {
+                                                    "service": "Microsoft.Storage"
+                                                }
+                                            ]
+                                        },
+                                        "type": "Microsoft.Network/virtualNetworks/subnets"
+                                    }
+                                ],
+                                "virtualNetworkPeerings": [
+                                    {
+                                        "name": "c5mi-vnet-1-shared-vnet-1-ugv-peer",
+                                        "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/c5mi-ugv-prod-rg-1/providers/Microsoft.Network/virtualNetworks/c5mi-ugv-vnet-1/virtualNetworkPeerings/c5mi-vnet-1-shared-vnet-1-ugv-peer",
+                                        "etag": "W/\"f3c48136-e743-49b9-be2e-b1c35c4ebfeb\"",
+                                        "properties": {
+                                            "provisioningState": "Succeeded",
+                                            "resourceGuid": "9829e029-3959-0149-075d-7b1c90827308",
+                                            "peeringState": "Connected",
+                                            "peeringSyncLevel": "FullyInSync",
+                                            "remoteVirtualNetwork": {
+                                                "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/shared-ugv-rg-1/providers/Microsoft.Network/virtualNetworks/shared-ugv-vnet-1"
+                                            },
+                                            "allowVirtualNetworkAccess": true,
+                                            "allowForwardedTraffic": true,
+                                            "allowGatewayTransit": false,
+                                            "useRemoteGateways": false,
+                                            "doNotVerifyRemoteGateways": false,
+                                            "peerCompleteVnets": true,
+                                            "remoteAddressSpace": {
+                                                "addressPrefixes": [
+                                                    "172.16.0.0/16",
+                                                    "fd00::/48"
+                                                ]
+                                            },
+                                            "remoteVirtualNetworkAddressSpace": {
+                                                "addressPrefixes": [
+                                                    "172.16.0.0/16",
+                                                    "fd00::/48"
+                                                ]
+                                            },
+                                            "routeServiceVips": {}
+                                        },
+                                        "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings"
+                                    }
+                                ],
+                                "enableDdosProtection": false
+                            },
+                            "tags": {
+                                "displayName": "c5mi-ugv-vnet-1",
+                                "environment": "prod",
+                                "application": "customer",
+                                "customer": "c5mi"
+                            }
+                        }
+                    ],
+                    "outputs": {}
+                }
+            }
+        },
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-05-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+                "supportsHttpsTrafficOnly": "[parameters('supportsHttpsTrafficOnly')]",
+                "allowBlobPublicAccess": "[parameters('allowBlobPublicAccess')]",
+                "allowSharedKeyAccess": "[parameters('allowSharedKeyAccess')]",
+                "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+                "allowCrossTenantReplication": "[parameters('allowCrossTenantReplication')]",
+                "networkAcls": {
+                    "bypass": "[parameters('networkAclsBypass')]",
+                    "defaultAction": "[parameters('networkAclsDefaultAction')]",
+                    "ipRules": "[parameters('networkAclsIpRules')]",
+                    "virtualNetworkRules": "[parameters('networkAclsVirtualNetworkRules')]"
+                },
+                "encryption": {
+                    "keySource": "[parameters('keySource')]",
+                    "services": {
+                        "blob": {
+                            "enabled": "[parameters('encryptionEnabled')]"
+                        },
+                        "file": {
+                            "enabled": "[parameters('encryptionEnabled')]"
+                        },
+                        "table": {
+                            "enabled": "[parameters('encryptionEnabled')]"
+                        },
+                        "queue": {
+                            "enabled": "[parameters('encryptionEnabled')]"
+                        }
+                    },
+                    "requireInfrastructureEncryption": "[parameters('infrastructureEncryptionEnabled')]"
+                }
+            },
+            "dependsOn": [
+                "Microsoft.Resources/deployments/virtualNetworks_0.8522597343607292"
+            ],
+            "sku": {
+                "name": "[parameters('accountType')]"
+            },
+            "kind": "[parameters('kind')]",
+            "tags": {}
+        },
+        {
+            "name": "[concat(parameters('storageAccountName'), '/default')]",
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2023-05-01",
+            "properties": {
+                "protocolSettings": null,
+                "shareDeleteRetentionPolicy": {
+                    "enabled": "[parameters('isShareSoftDeleteEnabled')]",
+                    "days": "[parameters('shareSoftDeleteRetentionDays')]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+            ]
+        }
+    ],
+    "outputs": {}
+}

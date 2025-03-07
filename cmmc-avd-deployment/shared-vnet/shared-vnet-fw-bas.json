@@ -117,7 +117,8 @@
             },
             "copy": {
                 "name": "subnetCopy",
-                "count": 2
+                "count": 2,
+                "mode": "Serial"
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', concat('shared-', parameters('locationShortName'), '-vnet-1'))]"
@@ -501,6 +502,13 @@
         "sharedRouteTableName": {
             "type": "string",
             "value": "[concat('shared-', parameters('locationShortName'),'-rt-1')]"
+        },
+        "sharedSubnetNames" : {
+            "type": "array",
+            "copy": {
+                "count": 2,
+                "input": "[concat('shared-', parameters('locationShortName'), '-vnet-1-snet-', copyIndex(1))]"
+            }
         }
     }
 }

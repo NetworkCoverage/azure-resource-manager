@@ -390,7 +390,7 @@
                             "modulesUrl": "https://wvdportalstorageblob.blob.core.usgovcloudapi.net/galleryartifacts/Configuration_1.0.02929.635.zip",
                             "configurationFunction": "Configuration.ps1\\AddSessionHost",
                             "properties": {
-                                "hostPoolName": "[parameters('hostpoolName')]",
+                                "hostPoolName": "[parameters('hostPoolName')]",
                                 "registrationInfoToken": "[reference(parameters('hostpoolName')).registrationInfo.token]",
                                 "aadJoin": "[parameters('entraIdJoin')]",
                                 "UseAgentDownloadEndpoint": true,

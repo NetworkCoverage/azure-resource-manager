@@ -1,0 +1,73 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "usgovvirginia"
+        },
+        "storageAccountName": {
+            "value": "c5miugvfslogixsa"
+        },
+        "accountType": {
+            "value": "Premium_LRS"
+        },
+        "kind": {
+            "value": "FileStorage"
+        },
+        "minimumTlsVersion": {
+            "value": "TLS1_2"
+        },
+        "supportsHttpsTrafficOnly": {
+            "value": true
+        },
+        "allowBlobPublicAccess": {
+            "value": false
+        },
+        "allowSharedKeyAccess": {
+            "value": true
+        },
+        "publicNetworkAccess": {
+            "value": "Enabled"
+        },
+        "allowCrossTenantReplication": {
+            "value": false
+        },
+        "networkAclsBypass": {
+            "value": "AzureServices"
+        },
+        "networkAclsDefaultAction": {
+            "value": "Deny"
+        },
+        "networkAclsIpRules": {
+            "value": []
+        },
+        "networkAclsVirtualNetworkRules": {
+            "value": [
+                {
+                    "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/c5mi-ugv-prod-rg-1/providers/Microsoft.Network/virtualNetworks/c5mi-ugv-vnet-1/subnets/c5mi-ugv-snet-1"
+                },
+                {
+                    "id": "/subscriptions/b27f2238-8a1b-40b4-8925-3a0c785fcdcc/resourceGroups/c5mi-ugv-prod-rg-1/providers/Microsoft.Network/virtualNetworks/c5mi-ugv-vnet-1/subnets/c5mi-ugv-snet-2"
+                }
+            ]
+        },
+        "keySource": {
+            "value": "Microsoft.Storage"
+        },
+        "encryptionEnabled": {
+            "value": true
+        },
+        "keyTypeForTableAndQueueEncryption": {
+            "value": "Account"
+        },
+        "infrastructureEncryptionEnabled": {
+            "value": true
+        },
+        "isShareSoftDeleteEnabled": {
+            "value": true
+        },
+        "shareSoftDeleteRetentionDays": {
+            "value": 7
+        }
+    }
+}

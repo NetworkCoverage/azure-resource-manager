@@ -368,7 +368,7 @@ $PolicyTemplates = @(
     }
 )
 
-$PolicyTemplates[5] | ForEach-Object -Process {
+$PolicyTemplates | ForEach-Object -Process {
     Write-Host ('Creating conditional access policy - {0}' -f $_.displayName)
     $Params = @{
         DisplayName = $_.displayName;

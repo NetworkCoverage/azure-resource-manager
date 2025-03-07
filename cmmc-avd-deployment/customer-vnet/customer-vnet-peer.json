@@ -111,7 +111,7 @@
                         "name": "subnets",
                         "count": 2,
                         "input": {
-                            "name": "[concat(parameters('customerShortName'), '-', parameters('locationShortName'), '-snet-', copyIndex('subnets', 1))]",
+                            "name": "[concat(parameters('customerShortName'), '-', parameters('locationShortName'), '-vnet-1-snet-', copyIndex('subnets', 1))]",
                             "properties": {
                                 "addressPrefix": "[cidrSubnet(parameters('vnetIpv4AddressSpace'), 24, copyIndex('subnets'))]",
                                 "routeTable": {
@@ -250,5 +250,25 @@
             ]
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "customerResourceGroupName" : {
+            "type": "string",
+            "value": "[resourceGroup().name]"
+        },
+        "customerVnetName": {
+            "type": "string",
+            "value": "[concat(parameters('customerShortName'), '-', parameters('locationShortName'), '-vnet-1')]"
+        },
+        "sharedVnetIpv4AddressSpace": {
+            "type": "string",
+            "value": "[parameters('vnetIpv4AddressSpace')]"
+        },
+        "customerSubnetNames" : {
+            "type": "array",
+            "copy": {
+                "count": 2,
+                "input": "[concat(parameters('customerShortName'), '-', parameters('locationShortName'), '-vnet-1-snet-', copyIndex(1))]"
+            }
+        }
+    }
 }
