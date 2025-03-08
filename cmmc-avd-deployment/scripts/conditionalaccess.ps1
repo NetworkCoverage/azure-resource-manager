@@ -279,7 +279,7 @@ $PolicyTemplates = @(
         };
         sessionControls = @{
             signInFrequency = @{
-                value = "1";
+                value = 1;
                 type = "hours";
                 authenticationType = "primaryAndSecondaryAuthentication";
                 frequencyInterval = "timeBased";
@@ -371,10 +371,10 @@ $PolicyTemplates = @(
 $PolicyTemplates | ForEach-Object -Process {
     Write-Host ('Creating conditional access policy - {0}' -f $_.displayName)
     $Params = @{
-        DisplayName = $_.displayName;
-        State = $_.state;
-        Conditions = $_.conditions;
-        GrantControls = $_.grantcontrols;  
+        DisplayName = $_.displayName
+        State = $_.state
+        Conditions = $_.conditions
+        GrantControls = $_.grantcontrols
     }
     New-MgIdentityConditionalAccessPolicy @Params
 }

@@ -1,0 +1,256 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"vmName": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the virtual machine to be created."
+			}
+		},
+		"vnetResourceGroupName": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the resource group containing the virtual network to which the virtual machines will be connected."
+			},
+			"defaultValue": "[resourceGroup().name]"
+		},
+		"existingVnetName": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the existing virtual network that the virtual machines will be connected to."
+			}
+		},
+		"existingSubnetName": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the subnet within the specified virtual network where the virtual machines will be deployed."
+			}
+		},
+		"vmGalleryImageHasPlan": {
+			"type": "bool",
+			"metadata": {
+				"description": "Indicates whether the selected VM image requires a purchase plan."
+			},
+			"defaultValue": false
+		},
+		"vmGalleryImageOffer": {
+			"type": "string",
+			"metadata": {
+				"description": "The offer name of the gallery image used to deploy the virtual machine."
+			},
+			"defaultValue": ""
+		},
+		"vmGalleryImagePublisher": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the publisher providing the gallery image."
+			},
+			"defaultValue": "microsoftwindowsdesktop"
+		},
+		"vmGalleryImageSKU": {
+			"type": "string",
+			"metadata": {
+				"description": "The Stock Keeping Unit (SKU) identifier for the selected gallery image."
+			},
+			"defaultValue": ""
+		},
+		"vmGalleryImageVersion": {
+			"type": "string",
+			"metadata": {
+				"description": "The version of the gallery image (optional, only specified when using a gallery image)."
+			},
+			"defaultValue": ""
+		},
+		"vmSize": {
+			"type": "string",
+			"metadata": {
+				"description": "The selected virtual machine size (SKU) that determines compute resources such as CPU and memory."
+			},
+			"defaultValue": "Standard_A2"
+		},
+		"vmAdministratorAccountUsername": {
+			"type": "string",
+			"metadata": {
+				"description": "The username for the virtual machine administrator account."
+			}
+		},
+		"vmAdministratorAccountPassword": {
+			"type": "securestring",
+			"metadata": {
+				"description": "The password associated with the virtual machine administrator account."
+			}
+		},
+		"runCommandSourceUri": {
+			"type": "string",
+			"metadata": {
+				"description": "The URI location of the source script used for executing run commands on the virtual machine."
+			},
+			"defaultValue": "https://raw.githubusercontent.com/NetworkCoverage/Azure-PS-Resource-Manager/refs/heads/main/cmmc-avd-deployment/scripts/fslogixcloudidentity.ps1"
+		},
+		"fslogixStorageAccount": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the existing Azure Storage Account that contains the FSLogix profile share."
+			}
+		},
+		"fslogixStorageAccountKey": {
+			"type": "securestring",
+			"metadata": {
+				"description": "The access key required to authenticate to the specified FSLogix storage account."
+			}
+		},
+		"fslogixFileShare": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the FSLogix file share within the specified storage account."
+			}
+		}
+	},
+	"variables": {
+		"subnet-id": "[resourceId(parameters('vnetResourceGroupName'),'Microsoft.Network/virtualNetworks/subnets', parameters('existingVnetName'), parameters('existingSubnetName'))]",
+		"planInfoEmpty": "[or(empty(parameters('vmGalleryImageSKU')), empty(parameters('vmGalleryImagePublisher')), empty(parameters('vmGalleryImageOffer')))]",
+        "marketplacePlan": {
+            "name": "[parameters('vmGalleryImageSKU')]",
+            "publisher": "[parameters('vmGalleryImagePublisher')]",
+            "product": "[parameters('vmGalleryImageOffer')]"
+        },
+        "vmPlan": "[if(or(variables('planInfoEmpty'), not(parameters('vmGalleryImageHasPlan'))), json('null'), variables('marketplacePlan'))]",
+        "vmGalleryImageReference": {
+            "publisher": "[parameters('vmGalleryImagePublisher')]",
+            "offer": "[parameters('vmGalleryImageOffer')]",
+            "sku": "[parameters('vmGalleryImageSKU')]",
+            "version": "[if(empty(parameters('vmGalleryImageVersion')), 'latest', parameters('vmGalleryImageVersion'))]"
+        }
+	},
+	"resources": [
+		{
+            "name": "[concat(parameters('vmName'), '-nic')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2022-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnet-id')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+		{
+            "name": "[parameters('vmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-07-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat(parameters('vmName'), '-nic')]"
+            ],
+            "identity": {
+                "type": "None"
+            },
+            "plan": "[variables('vmPlan')]",
+            "properties": {
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "licenseType": "Windows_Client",
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), '-nic'))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('vmAdministratorAccountUsername')]",
+                    "adminPassword": "[parameters('vmAdministratorAccountPassword')]"
+                },
+                "securityProfile": {
+                    "uefiSettings": {
+                        "secureBootEnabled": true,
+                        "vTpmEnabled": true
+                    },
+                    "securityType": "TrustedLaunch"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('vmGalleryImageReference')]",
+                    "osDisk": {
+                        "name": "[concat(parameters('vmName'), '-osdisk')]",
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        }
+                    }
+                }
+            },
+			"resources": [
+				{
+					"name": "fslogixRunCommand",
+					"type": "runCommands",
+					"apiVersion": "2024-07-01",
+					"location": "[resourceGroup().location]",
+					"dependsOn": [
+						"[parameters('vmName')]",
+						"[concat(parameters('vmName'), '-snap')]"
+					],
+					"properties": {
+						"asyncExecution": false,
+						"parameters": [
+							{
+								"name": "StorageAccount",
+								"value": "[parameters('fslogixStorageAccount')]"
+							},
+							{
+								"name": "Share",
+								"value": "[parameters('fslogixFileShare')]"
+							}
+						],
+						"protectedParameters": [
+							{
+								"name": "Secret",
+								"value": "[parameters('fslogixStorageAccountKey')]"
+							}
+						],
+						"source": {
+							"scriptUri": "[parameters('runCommandSourceUri')]"
+						},
+						"timeoutInSeconds": 300,
+						"treatFailureAsDeploymentFailure": false
+					}
+				}
+			]
+        },
+		{
+            "name": "[concat(parameters('vmName'), '-snap')]",
+            "type": "Microsoft.Compute/snapshots",
+            "apiVersion": "2024-03-02",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('vmName')]"
+            ],
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "creationData": {
+                    "createOption": "Copy",
+                    "sourceResourceId": "[resourceId('Microsoft.Compute/disks', concat(parameters('vmName'), '-osdisk'))]"
+                },
+                "incremental": false
+            }
+        }
+	],
+	"outputs": {}
+}

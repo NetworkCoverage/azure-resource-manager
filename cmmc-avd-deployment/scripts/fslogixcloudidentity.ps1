@@ -1,3 +1,9 @@
+param (
+    [System.String] $StorageAccount,
+    [System.String] $Share,
+    [System.String] $Secret
+)
+
 function Register-EventScript {
     param (
         [System.String] $eventToRegister, # Either Startup or Shutdown
@@ -110,4 +116,4 @@ $path = ("{0}\System32\GroupPolicy\Machine\Scripts\Startup" -f $env:SystemRoot)
 (Get-Command Set-FsLogixProfile).ScriptBlock | Set-Content -Path ("{0}\System32\GroupPolicy\Machine\Scripts\Startup\Set-FsLogixProfile.ps1" -f $env:SystemRoot) -Force
 
 # register the script
-Register-EventScript -eventToRegister "Startup" -script "Set-FsLogixProfile.ps1" -scriptParameters "-StorageAccount <storage account name> -Share <share name> -Secret <storage account key>"
+Register-EventScript -eventToRegister "Startup" -script "Set-FsLogixProfile.ps1" -scriptParameters ("-StorageAccount {0} -Share {1} -Secret {2}" -f $StorageAccount, $Share, $Secret)
