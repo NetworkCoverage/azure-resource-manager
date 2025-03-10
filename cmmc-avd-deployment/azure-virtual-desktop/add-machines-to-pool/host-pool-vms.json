@@ -272,7 +272,10 @@
             "offer": "[parameters('vmGalleryImageOffer')]",
             "sku": "[parameters('vmGalleryImageSKU')]",
             "version": "[if(empty(parameters('vmGalleryImageVersion')), 'latest', parameters('vmGalleryImageVersion'))]"
-        }
+        },
+        "vmCustomImageReference": {
+            "id": "[parameters('vmImageSourceId')]"
+          }
     },
     "resources": [
         {
@@ -360,7 +363,7 @@
                     "securityType": "TrustedLaunch"
                 },
                 "storageProfile": {
-                    "imageReference": "[if(equals(parameters('vmImageType'), 'Gallery'), variables('vmGalleryImageReference'), parameters('vmImageSourceId'))]",
+                    "imageReference": "[if(equals(parameters('vmImageType'), 'Gallery'), variables('vmGalleryImageReference'), variables('vmCustomImageReference'))]",
                     "osDisk": {
                         "name": "[concat(variables('vmName')[copyIndex()], '-osdisk')]",
                         "createOption": "FromImage",
