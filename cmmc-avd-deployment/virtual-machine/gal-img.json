@@ -1,0 +1,141 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "customerShortName": {
+            "type": "string",
+            "metadata": {
+                "description": "The abbreviated name of the customer"
+            }
+        },
+        "vmName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the VM"
+            }
+        },
+        "vmResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the resource group where the VM is located"
+            }
+        },
+        "publisher": {
+            "type": "string",
+            "metadata": {
+                "description": "Publisher of the image."
+            }
+        },
+        "offer": {
+            "type": "string",
+            "metadata": {
+                "description": "Offer of the image."
+            }
+        },
+        "sku": {
+            "type": "string",
+            "metadata": {
+                "description": "SKU of the image."
+            }
+        },
+        "isAcceleratedNetworkSupported": {
+            "type": "bool",
+            "metadata": {
+                "description": "Whether accelerated network is supported."
+            },
+            "defaultValue": true
+        }
+    },
+    "functions": [],
+    "variables": {
+        "galleryName": "[concat(parameters('customerShortName'), resourceGroup().location , 'avdgal')]",
+        "imageDefinitionName": "[concat(parameters('customerShortName'), '-avd-img-def')]",
+        "versionName": "1.0.0",
+        "sourceVmId": "[resourceId(parameters('vmResourceGroup'), 'Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/galleries",
+            "name": "[variables('galleryName')]",
+            "apiVersion": "2019-03-01",
+            "location": "[resourceGroup().location]",
+            "resources": [
+                {
+                    "name": "[variables('imageDefinitionName')]",
+                    "type": "images",
+                    "dependsOn": [
+                        "[variables('galleryName')]"
+                    ],
+                    "apiVersion": "2021-07-01",
+                    "location": "[resourceGroup().location]",
+                    "properties": {
+                        "osType": "Windows",
+                        "osState": "Generalized",
+                        "identifier": {
+                            "publisher": "[parameters('publisher')]",
+                            "offer": "[parameters('offer')]",
+                            "sku": "[parameters('sku')]"
+                        },
+                        "hyperVGeneration": "V2",
+                        "features": [
+                            {
+                                "name": "securityType",
+                                "value": "Trusted"
+                            },
+                            {
+                                "name": "isAcceleratedNetworkSupported",
+                                "value": "[parameters('isAcceleratedNetworkSupported')]"
+                            }
+                        ]/*,
+                        "recommended": {
+                            "vCPUs": {
+                                "min": 1,
+                                "max": 16
+                            },
+                            "memory": {
+                                "min": 1,
+                                "max": 128
+                            }
+                        }*/
+                    },
+                    "tags": {}
+                },
+                {
+                    "name": "[concat(variables('imageDefinitionName'), variables('versionName'))]",
+                    "type": "images/versions",
+                    "dependsOn": [
+                        "[variables('galleryName')]",
+                        "[variables('imageDefinitionName')]"
+                    ],
+                    "apiVersion": "2021-07-01",
+                    "location": "[resourceGroup().location]",
+                    "properties": {
+                        "publishingProfile": {
+                            "replicaCount": 1,
+                            "targetRegions": [
+                                {
+                                    "name": "[resourceGroup().location]",
+                                    "regionalReplicaCount": 1,
+                                    "storageAccountType": "Premium_LRS"
+                                }
+                            ],
+                            "excludeFromLatest": false
+                        },
+                        "storageProfile": {
+                            "source": {
+                                "id": "[variables('sourceVmId')]"
+                            }
+                        }
+                    },
+                    "tags": {}
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "galleryImageVersionId" : {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Compute/galleries/images/versions', variables('galleryName'), variables('imageDefinitionName'), variables('versionName'))]"
+        }
+    }
+}
