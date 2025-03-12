@@ -2,8 +2,11 @@
 
 if ((Get-BitLockerVolume).VolumeStatus -contains 'FullyEncrypted') {(Get-BitLockerVolume | Where-Object -Property VolumeStatus -eq 'FullyEncrypted').MountPoint | ForEach-Object -Process {Disable-BitLocker -MountPoint $_}}
 do {
-    ('{0} {1}' -f (Get-BitLockerVolume).VolumeStatus, (Get-BitLockerVolume).EncryptionPercentage) 
+    $CurrentVolume = Get-BitLockerVolume| Where-Object -Property VolumeStatus -eq 'DecryptionInProgress'
+    ('{0} {1}' -f $CurrentVolume.VolumeStatus, $CurrentVolume.EncryptionPercentage) 
     Start-Sleep 30 
 } 
 while ((Get-BitLockerVolume).VolumeStatus -contains 'DecryptionInProgress')
-& "C:\Windows\System32\Sysprep\sysprep.exe" /generalize /oobe /shutdown /quiet
+
+rmdir C:\Windows\Panther -Confirm:$false -Recurse
+& "$env:SytemRoot\System32\Sysprep\sysprep.exe" /generalize /oobe /shutdown /quiet

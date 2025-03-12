@@ -1,0 +1,435 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "locationShortName": {
+            "allowedValues": [
+                "uga",
+                "ugt",
+                "ugv"
+
+            ],
+            "type": "string",
+            "metadata": {
+                "description": "Azure region where the virtual network will be created."
+            }
+        },
+        "sdpVersion": {
+            "type": "string",
+            "metadata": {
+                "description": "Version of the AppGate SDP VM to deploy."
+            },
+            "defaultValue": "v6_3a_vm"
+        },
+        "vnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the exisintg virtual network for the AppGate SDP VM."
+            }
+        },
+        "subnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the existing subnet for the AppGate SDP VM."
+            }
+        },
+        "fwPublicIp": {
+            "type": "string",
+            "metadata": {
+                "description": "The public IP address for the firewall."
+            }
+        },
+        "fwPolicyName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the firewall policy"
+            }
+        },
+        "dnatRuleCollectionGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the rule collection group"
+            },
+            "defaultValue": "shared-ugv-afwprg-dnat"
+        },
+        "networkRuleCollectionGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the rule collection group"
+            },
+            "defaultValue": "shared-ugv-afwprg-net"
+        },
+        "sshSourceAddress": {
+            "type": "string",
+            "metadata": {
+                "description": "Source IP address for SSH access to the AppGate SDP VM."
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "vmName": "[concat('shared-', parameters('locationShortName'), '-appgate-gw')]",
+        "vmNicName": "[concat(variables('vmName'), '-nic')]",
+        "publicIpv4AddressName": "[concat('shared-', parameters('locationShortName'), '-aggw-ipv4-pip')]",
+        "publicIpv6AddressName": "[concat('shared-', parameters('locationShortName'), '-aggw-ipv6-pip')]",
+        "subnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]",
+        "sshKeyName": "[concat('shared-', parameters('locationShortName'), '-appgate-gw-sshkey')]",
+        "keyVaultName": "[concat('shared-', parameters('locationShortName'), '-kv-1')]",
+        "scriptName":  "[concat('shared-', parameters('locationShortName'), '-appgate-script')]",
+        "dnatRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('dnatRuleCollectionGroupName'))]",
+        "networkRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('networkRuleCollectionGroupName'))]"
+    },
+    "resources": [
+        {
+            "name": "[variables('scriptName')]",
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "location": "[resourceGroup().location]",
+            "kind": "AzureCLI",
+            "properties": {
+                "azCliVersion": "2.50.0",
+                "scriptContent": "ssh-keygen -m PEM -t rsa -b 4096 -f key -C cz; privateKey=$(cat key); publicKey=$(cat key.pub); json=\"{\\\"keyinfo\\\":{\\\"privateKey\\\":\\\"$privateKey\\\",\\\"publicKey\\\":\\\"$publicKey\\\"}}\"; echo \"$json\" > \"$AZ_SCRIPTS_OUTPUT_PATH\"",
+                "timeout": "PT15M",
+                "cleanupPreference": "OnSuccess",
+                "retentionInterval": "PT1H"
+            }
+        },
+        {
+            "name": "[variables('sshKeyName')]",
+            "type": "Microsoft.Compute/sshPublicKeys",
+            "apiVersion": "2024-07-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deploymentScripts', variables('scriptName'))]"
+            ],
+            "properties": {
+                "publicKey": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('scriptName')), '2020-10-01').outputs.keyinfo.publicKey]"
+            }
+        },
+        {
+            "name": "[variables('keyVaultName')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2024-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "enabledForDeployment": true,
+                "enabledForTemplateDeployment": true,
+                "enabledForDiskEncryption": true,
+                "enableRbacAuthorization": true,
+                "accessPolicies": [],
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "name": "Standard",
+                    "family": "A"
+                },
+                "publicNetworkAccess": "Enabled",
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 90,
+                "networkAcls": {
+                    "defaultAction": "allow",
+                    "bypass": "AzureServices",
+                    "ipRules": [],
+                    "virtualNetworkRules": []
+                }
+            },
+            "resources": [
+                {
+                    "name": "[concat(variables('keyVaultName'), '-private-key')]",
+                    "type": "secrets",
+                    "apiVersion": "2023-07-01",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+                        "[resourceId('Microsoft.Compute/sshPublicKeys', variables('sshKeyName'))]"
+                    ],
+                    "properties": {
+                        "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('scriptName')), '2020-10-01').outputs.keyinfo.privateKey]"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[if(equals(copyIndex(), 0), variables('publicIpv4AddressName'), variables('publicIpv6AddressName'))]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "pipCopy",
+                "count": 2
+            },
+            "properties": {
+                "publicIPAddressVersion": "[if(equals(copyIndex(), 0), 'IPv4', 'IPv6')]",
+                "publicIPAllocationMethod": "Static"
+            },
+            "sku": {
+                "name": "Standard"
+            },
+            "tags": {
+                "displayName": "[if(equals(copyIndex(), 0), variables('publicIpv4AddressName'), variables('publicIpv6AddressName'))]"
+            }
+        },
+        {
+            "name": "[variables('vmNicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpv4AddressName'))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpv6AddressName'))]"
+            ],
+            "properties": {
+                "copy": [
+                    {
+                        "name": "ipConfigurations",
+                        "count": 2,
+                        "input": {
+                            "name": "[if(equals(copyIndex('ipConfigurations'), 0), 'ipconfig-v4', 'ipconfig-v6')]",
+                            "properties": {
+                                "privateIPAddressVersion": "[if(equals(copyIndex('ipConfigurations'), 0), 'IPv4', 'IPv6')]",
+                                "privateIPAllocationMethod": "Dynamic",
+                                "publicIPAddress": {
+                                    "id": "[resourceId('Microsoft.Network/publicIPAddresses', if(equals(copyIndex('ipConfigurations'), 0), variables('publicIpv4AddressName'), variables('publicIpv6AddressName')))]"
+                                },
+                                "subnet": {
+                                    "id": "[variables('subnetId')]"
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "tags": {
+                "displayName": "[variables('vmNicName')]"
+            }
+        },
+        {
+            "name": "[variables('vmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2022-11-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('vmNicName'))]",
+                "[resourceId('Microsoft.Resources/deploymentScripts', variables('scriptName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_B2s"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "name": "[concat(variables('vmName'), '-osdisk')]",
+                        "createOption": "fromImage",
+                        "deleteOption": "Delete",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        }
+                    },
+                    "imageReference": {
+                        "publisher": "cyxtera",
+                        "offer": "appgatesdp-vm",
+                        "sku": "[parameters('sdpVersion')]",
+                        "version": "latest"
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "[concat(variables('vmName'),'-datadisk')]",
+                            "diskSizeGB": 128,
+                            "lun": 0,
+                            "createOption": "Empty",
+                            "deleteOption": "Delete"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))]",
+                            "properties": {
+                                "deleteOption": "Delete"
+                            }
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')]",
+                    "adminUsername": "azureuser",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "patchSettings": {
+                            "assessmentMode": "ImageDefault",
+                            "patchMode": "ImageDefault"
+                        },
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "/home/azureuser/.ssh/authorized_keys", // Destination path for SSH public keys is currently limited to its default value /home/azureuser/.ssh/authorized_keys  due to a known issue in Linux provisioning agent
+                                    "keyData": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('scriptName')), '2020-10-01').outputs.keyinfo.publicKey]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            },
+            "plan": {
+                "name": "[parameters('sdpVersion')]",
+                "publisher": "cyxtera",
+                "product": "appgatesdp-vm"
+            }
+        },
+        {
+            "name": "[variables('dnatRuleCollectionGroupName')]",
+            "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('vmName')]"
+            ],
+            "properties": {
+                "priority": 500,
+                "ruleCollections": [
+                    {
+                        "ruleCollectionType": "FirewallPolicyNatRuleCollection",
+                        "action": {
+                            "type": "Dnat"
+                        },
+                        "rules": [
+                            {
+                                "ruleType": "NatRule",
+                                "name": "appgate-https-in",
+                                "translatedAddress": "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))).ipConfigurations[0].properties.privateIPAddress]",
+                                "translatedPort": "443",
+                                "ipProtocols": [
+                                    "TCP",
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "*"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [
+                                    "[parameters('fwPublicIp')]"
+                                ],
+                                "destinationPorts": [
+                                    "443"
+                                ]
+                            },
+                            {
+                                "ruleType": "NatRule",
+                                "name": "appgate-dns-in",
+                                "translatedAddress": "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))).ipConfigurations[0].properties.privateIPAddress]",
+                                "translatedPort": "53",
+                                "ipProtocols": [
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "*"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [
+                                    "[parameters('fwPublicIp')]"
+                                ],
+                                "destinationPorts": [
+                                    "53"
+                                ]
+                            },
+                            {
+                                "ruleType": "NatRule",
+                                "name": "appgate-ssh-in",
+                                "translatedAddress": "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))).ipConfigurations[0].properties.privateIPAddress]",
+                                "translatedPort": "22",
+                                "ipProtocols": [
+                                    "TCP"
+                                ],
+                                "sourceAddresses": [
+                                    "[parameters('sshSourceAddress')]"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [
+                                    "[parameters('fwPublicIp')]"
+                                ],
+                                "destinationPorts": [
+                                    "22"
+                                ]
+                            }
+                        ],
+                        "name": "dnatrules-appgate-allow",
+                        "priority": 501
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('networkRuleCollectionGroupName')]",
+            "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
+            "apiVersion": "2024-03-01",
+            "location": "usgovvirginia",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/firewallPolicies/ruleCollectionGroups', parameters('fwPolicyName'), parameters('dnatRuleCollectionGroupName'))]"
+            ],
+            "properties": {
+                "priority": 5000,
+                "ruleCollections": [
+                    {
+                        "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+                        "action": {
+                            "type": "Allow"
+                        },
+                        "rules": [
+                            {
+                                "ruleType": "NetworkRule",
+                                "name": "appgate-ntp-out",
+                                "ipProtocols": [
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))).ipConfigurations[0].properties.privateIPAddress]"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [],
+                                "destinationIpGroups": [],
+                                "destinationFqdns": [
+                                    "0.ubuntu.pool.ntp.org",
+                                    "1.ubuntu.pool.ntp.org",
+                                    "2.ubuntu.pool.ntp.org",
+                                    "3.ubuntu.pool.ntp.org"
+                                ],
+                                "destinationPorts": [
+                                    "123"
+                                ]
+                            },
+                            {
+                                "ruleType": "NetworkRule",
+                                "name": "appgate-1023-out",
+                                "ipProtocols": [
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))).ipConfigurations[0].properties.privateIPAddress]"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [],
+                                "destinationIpGroups": [],
+                                "destinationFqdns": [
+                                    "0.ubuntu.pool.ntp.org",
+                                    "1.ubuntu.pool.ntp.org",
+                                    "2.ubuntu.pool.ntp.org",
+                                    "3.ubuntu.pool.ntp.org"
+                                ],
+                                "destinationPorts": [
+                                    "1023"
+                                ]
+                            }
+                        ],
+                        "name": "networkrules-appgate-allow",
+                        "priority": 5100
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}

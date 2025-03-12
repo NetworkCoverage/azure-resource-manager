@@ -217,7 +217,8 @@
                 "ring": null,
                 "customRdpProperty": "[if(empty(parameters('customRdpProperty')), null(), parameters('customRdpProperty'))]",
                 "publicNetworkAccess": "Enabled",
-                "managementType": "Standard"
+                "managementType": "Standard",
+                "startVMOnConnect": true
             },
             "resources": [
                 {
@@ -275,7 +276,9 @@
             "properties": {
                 "applicationGroupReferences": [
                     "[resourceId('Microsoft.DesktopVirtualization/applicationgroups', concat(parameters('hostpoolName'), '-dag'))]"
-                ]
+                ],
+                "description": "[format('Grouping of {0} application groups.', if(parameters('isManagementHostPool'), 'management', parameters('customerShortName')))]", // need to update to customer full name
+                "friendlyName": "[format('{0} Workspace', if(parameters('isManagementHostPool'), concat(parameters('customerShortName'), 'Management'), parameters('customerShortName')))]"    
             },
             "resources": [
                 {

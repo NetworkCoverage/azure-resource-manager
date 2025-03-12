@@ -1,47 +1,50 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {
+   "parameters": {
         "customerShortName": {
             "type": "string",
             "metadata": {
-                "description": "The abbreviated name of the customer"
+                "description": "A short, standardized abbreviation representing the customer."
             }
         },
         "vmName": {
             "type": "string",
             "metadata": {
-                "description": "The name of the VM"
+                "description": "The designated name of the virtual machine to be created or managed."
             }
         },
         "vmResourceGroup": {
             "type": "string",
             "metadata": {
-                "description": "The name of the resource group where the VM is located"
+                "description": "The name of the resource group where the virtual machine resides."
             }
         },
         "publisher": {
             "type": "string",
             "metadata": {
-                "description": "Publisher of the image."
-            }
+                "description": "The name of the publisher providing the VM image."
+            },
+            "defaultValue": "network-coverage"
         },
         "offer": {
             "type": "string",
             "metadata": {
-                "description": "Offer of the image."
-            }
+                "description": "The specific offer associated with the VM image."
+            },
+            "defaultValue": "multisessionavddesktop"
         },
         "sku": {
             "type": "string",
             "metadata": {
-                "description": "SKU of the image."
-            }
+                "description": "The stock-keeping unit (SKU) identifier for the VM image."
+            },
+            "defaultValue": "nc-win11-24h2-avd"
         },
         "isAcceleratedNetworkSupported": {
             "type": "bool",
             "metadata": {
-                "description": "Whether accelerated network is supported."
+                "description": "Indicates whether accelerated networking is enabled for the VM to improve performance."
             },
             "defaultValue": true
         }
@@ -72,7 +75,7 @@
                         "osType": "Windows",
                         "osState": "Generalized",
                         "identifier": {
-                            "publisher": "[parameters('publisher')]",
+                            "publisher": "[parameters('publisher')]", 
                             "offer": "[parameters('offer')]",
                             "sku": "[parameters('sku')]"
                         },

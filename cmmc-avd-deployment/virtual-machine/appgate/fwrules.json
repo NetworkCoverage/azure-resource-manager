@@ -1,0 +1,197 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "fwPolicyName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the firewall policy"
+            }
+        },
+        "fwPublicIp": {
+            "type": "string",
+            "metadata": {
+                "description": "Public IP address of the firewall"
+            }
+        },
+        "sshSourceAddress": {
+            "type": "string",
+            "metadata": {
+                "description": "Source IP address for SSH access"
+            }
+        },
+        "dnatRuleCollectionGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the DNAT rule collection group"
+            }
+        },
+        "networkRuleCollectionGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the network rule collection group"
+            }
+        },
+        "appgatePrivateIp": {
+            "type": "string",
+            "metadata": {
+                "description": "Private IP address of the AppGate gateway"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "dnatRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('dnatRuleCollectionGroupName'))]",
+        "networkRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('networkRuleCollectionGroupName'))]"
+    },
+    "resources": [
+        {
+            "name": "[variables('dnatRuleCollectionGroupName')]",
+            "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "priority": 500,
+                "ruleCollections": [
+                    {
+                        "name": "dnatrules-appgate-allow",
+                        "priority": 501,
+                        "ruleCollectionType": "FirewallPolicyNatRuleCollection",
+                        "action": {
+                            "type": "Dnat"
+                        },
+                        "rules": [
+                            {
+                                "ruleType": "NatRule",
+                                "name": "appgate-https-in",
+                                "translatedAddress": "[parameters('appgatePrivateIp')]",
+                                "translatedPort": "443",
+                                "ipProtocols": [
+                                    "TCP",
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "*"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [
+                                    "[parameters('fwPublicIp')]"
+                                ],
+                                "destinationPorts": [
+                                    "443"
+                                ]
+                            },
+                            {
+                                "ruleType": "NatRule",
+                                "name": "appgate-dns-in",
+                                "translatedAddress": "[parameters('appgatePrivateIp')]",
+                                "translatedPort": "53",
+                                "ipProtocols": [
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "*"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [
+                                    "[parameters('fwPublicIp')]"
+                                ],
+                                "destinationPorts": [
+                                    "53"
+                                ]
+                            },
+                            {
+                                "ruleType": "NatRule",
+                                "name": "appgate-ssh-in",
+                                "translatedAddress": "[parameters('appgatePrivateIp')]",
+                                "translatedPort": "22",
+                                "ipProtocols": [
+                                    "TCP"
+                                ],
+                                "sourceAddresses": [
+                                    "[parameters('sshSourceAddress')]"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [
+                                    "[parameters('fwPublicIp')]"
+                                ],
+                                "destinationPorts": [
+                                    "22"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('networkRuleCollectionGroupName')]",
+            "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
+            "apiVersion": "2024-03-01",
+            "location": "usgovvirginia",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/firewallPolicies/ruleCollectionGroups', parameters('fwPolicyName'), parameters('dnatRuleCollectionGroupName'))]"
+            ],
+            "properties": {
+                "priority": 5000,
+                "ruleCollections": [
+                    {
+                        "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+                        "action": {
+                            "type": "Allow"
+                        },
+                        "rules": [
+                            {
+                                "ruleType": "NetworkRule",
+                                "name": "appgate-ntp-out",
+                                "ipProtocols": [
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "[parameters('appgatePrivateIp')]"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [],
+                                "destinationIpGroups": [],
+                                "destinationFqdns": [
+                                    "0.ubuntu.pool.ntp.org",
+                                    "1.ubuntu.pool.ntp.org",
+                                    "2.ubuntu.pool.ntp.org",
+                                    "3.ubuntu.pool.ntp.org"
+                                ],
+                                "destinationPorts": [
+                                    "123"
+                                ]
+                            },
+                            {
+                                "ruleType": "NetworkRule",
+                                "name": "appgate-1023-out",
+                                "ipProtocols": [
+                                    "UDP"
+                                ],
+                                "sourceAddresses": [
+                                    "parameters('appgatePrivateIp')"
+                                ],
+                                "sourceIpGroups": [],
+                                "destinationAddresses": [],
+                                "destinationIpGroups": [],
+                                "destinationFqdns": [
+                                    "0.ubuntu.pool.ntp.org",
+                                    "1.ubuntu.pool.ntp.org",
+                                    "2.ubuntu.pool.ntp.org",
+                                    "3.ubuntu.pool.ntp.org"
+                                ],
+                                "destinationPorts": [
+                                    "1023"
+                                ]
+                            }
+                        ],
+                        "name": "networkrules-appgate-allow",
+                        "priority": 5100
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}

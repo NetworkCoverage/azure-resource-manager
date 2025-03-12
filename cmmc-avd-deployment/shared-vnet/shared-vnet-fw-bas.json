@@ -211,7 +211,7 @@
         {
             "name": "[concat('shared-', parameters('locationShortName'),'-afw-pip-', copyIndex(1))]",
             "type": "Microsoft.Network/publicIPAddresses",
-            "apiVersion": "2023-04-01",
+            "apiVersion": "2024-03-01",
             "location": "[resourceGroup().location]",
             "sku": {
                 "name": "standard"
@@ -273,7 +273,7 @@
         },
         // azure firewall policy rule collection group
         {
-            "name": "[concat('shared-', parameters('locationShortName'), '-afwp-1/shared-', parameters('locationShortName'), '-afwprg-1')]",
+            "name": "[concat('shared-', parameters('locationShortName'), '-afwp-1/shared-', parameters('locationShortName'), '-afwprg-app')]",
             "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
             "apiVersion": "2023-05-01",
             "location": "[resourceGroup().location]",

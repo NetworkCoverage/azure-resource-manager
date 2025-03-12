@@ -60,13 +60,6 @@
                 "description": "The name of the virtual network that will be granted access to the Azure Storage Account."
             }
         },
-        "allowedVnetIpv4AddressSpace": {
-            "type": "string",
-            "defaultValue": "172.16.0.0/16",
-            "metadata": {
-                "description": "The network address for the virtual network."
-            }
-        },
         "subnetInAllowedVnetName": {
             "type": "string",
             "metadata": {
@@ -208,7 +201,10 @@
             },
             "sku": {
                 "name": "[parameters('accountType')]"
-            }
+            },
+            "dependsOn": [
+                "subnetCopy"
+            ]
         },
         {
             "name": "[concat(parameters('storageAccountName'), '/default')]",
@@ -340,6 +336,9 @@
                         "[parameters('vaultName')]"
                     ]
                 }
+            ],
+            "dependsOn": [
+                "[parameters('storageAccountName')]"
             ]
         }
         
