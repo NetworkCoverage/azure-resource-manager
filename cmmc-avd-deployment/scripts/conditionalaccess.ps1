@@ -1,8 +1,8 @@
 #https://petri.com/powershell-create-conditional-access-policies/
 param (
     $TenantAdminUserPrincipalName, # this is the netcov admin user not your personal account
-    $MFAExemptGroupName
-    
+    $MFAExemptGroupName,
+    $EgnyteEnterpriseAppId
 )
 
 #Install-Module Microsoft.Graph
@@ -23,59 +23,100 @@ $TenantAdminUserId = (Get-MgUser -UserId $TenantAdminUserPrincipalName).Id
 New-MgGroup -DisplayName 'MFA Exempt' -MailEnabled:$false  -MailNickName 'mfaexempt' -SecurityEnabled
 $MFAExemptGroupId = (Get-MgGroup -Filter "DisplayName eq `'$MFAExemptGroupName`'").Id
 
+# Create named locations
+$NamedLocations = @(
+    @{
+        "@odata.type" = "#microsoft.graph.countryNamedLocation"
+        DisplayName = "US"
+        CountriesAndRegions = @(
+            "US"
+        )
+        IncludeUnknownCountriesAndRegions = $false
+        CountryLookupMethod = "clientIpAddress"
+    },
+    @{
+        "@odata.type" = "#microsoft.graph.ipNamedLocation"
+        DisplayName = "Enclave Public IPs"
+        IsTrusted = $true
+        IpRanges = @(
+            @{
+                "@odata.type" = "#microsoft.graph.iPv4CidrRange"
+                CidrAddress = '' #"12.34.221.11/22"
+            }
+            @{
+                "@odata.type" = "#microsoft.graph.iPv6CidrRange"
+                CidrAddress = '' #"2001:0:9d38:90d6:0:0:0:0/63"
+            }
+        )
+    }   
+)
+$NamedLocations | ForEach-Object -Process {
+    Write-Host ('Creating named location - {0}' -f $_.DisplayName)
+    New-MgIdentityConditionalAccessNamedLocation -BodyParameter $_
+}
+
+# Create conditional access policies
 $PolicyTemplates = @(
     @{
-        displayName = "Require multifactor authentication for all users";
-        state = "enabled";
+        displayName = "Require multifactor authentication for all users"
+        state = "enabled"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications= @{
                 includeApplications = "All"
-            };
+            }
             users = @{
                 includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
                 excludeGroups = $MFAExemptGroupId
             }
-        };
+            locations = @{
+                includeLocations = @(
+                    # "All"
+                )
+                excludeLocations = @(
+                    # "AllTrusted"
+                )
+            }
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "mfa"
         }
     },
     @{
-        displayName = "Block legacy authentication";
-        state = "enabled";
+        displayName = "Block legacy authentication"
+        state = "enabled"
         conditions = @{
             clientAppTypes = @(
                 "exchangeActiveSync",
                 "other"
-            );
+            )
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "block"
         }
     },
     @{
-        displayName = "Block access for unknown or unsupported device platform";
-        state = "enabled";
+        displayName = "Block access for unknown or unsupported device platform"
+        state = "enabled"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
-            };
+            }
             platforms = @{
                 includePlatforms = "all"
                 excludePlatforms = @(
@@ -85,33 +126,33 @@ $PolicyTemplates = @(
                     "linux"
                 )
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "block"
         }
     },
     @{
-        displayName = "Require approved client apps and app protection policies";
-        state = "enabled";
+        displayName = "Require approved client apps and app protection policies"
+        state = "enabled"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
-            };
+            }
             platforms = @{
                 includePlatforms = @(
                     "android",
                     "iOS"
                 )
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = @(
                 "approvedApplication",
                 "compliantApplication"
@@ -119,15 +160,15 @@ $PolicyTemplates = @(
         }
     },
     @{
-        displayName = "Require multifactor authentication for admins";
-        state = "enabled";
+        displayName = "Require multifactor authentication for admins"
+        state = "enabled"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                excludeUsers = $TenantAdminUserId;
+                excludeUsers = $TenantAdminUserId
                 includeRoles = @(
                     "62e90394-69f5-4237-9190-012177145e10",
                     "194ae4cb-b126-40b2-bd5b-6091b380977d",
@@ -145,26 +186,25 @@ $PolicyTemplates = @(
                     "e8611ab8-c189-46e8-94e1-60213ab1f814"
                 )
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "mfa"
         }
     },
-    # Use application enforced restrictions for unmanaged devices - this policy is failing with error code 1032: ConditionalActionPolicy validation failed due to InvalidControls.
     @{
-        displayName = "Use application enforced restrictions for unmanaged devices";
-        state = "enabled";
+        displayName = "Use application enforced restrictions for unmanaged devices"
+        state = "enabled"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "Office365"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
             }
-        };
+        }
         sessionControls = @{
             applicationEnforcedRestrictions = @{
                 isEnabled = $true
@@ -172,136 +212,135 @@ $PolicyTemplates = @(
         }
     },
     @{
-        displayName = "Block browser access on mobile devices";
-        state = "enabled";
+        displayName = "Block browser access on mobile devices"
+        state = "enabled"
         conditions = @{
-            clientAppTypes = "browser";
+            clientAppTypes = "browser"
             applications = @{
                 includeApplications = "Office365"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
-            };
+            }
             platforms =@{
                 includePlatforms = @(
                     "android",
                     "iOS"
                 )
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "block"
         }
     },
     @{
-        displayName = "Require multifactor authentication for guest access";
-        state = "enabledForReportingButNotEnforced";
+        displayName = "Require multifactor authentication for guest access"
+        state = "enabledForReportingButNotEnforced"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                includeUsers = "GuestsOrExternalUsers";
+                includeUsers = "GuestsOrExternalUsers"
                 excludeUsers = $TenantAdminUserId
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "mfa"
         }
     },
     @{
-        displayName = "Require multifactor authentication for risky sign-ins";
-        state = "enabledForReportingButNotEnforced";
+        displayName = "Require multifactor authentication for risky sign-ins"
+        state = "enabledForReportingButNotEnforced"
         conditions = @{
             signInRiskLevels = @(
                 "high",
                 "medium"
-            );
-            clientAppTypes = "all";
+            )
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
                 includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "mfa"
         }
     },
     @{
-        displayName = "Require password change for high-risk users";
-        state = "enabledForReportingButNotEnforced";
+        displayName = "Require password change for high-risk users"
+        state = "enabledForReportingButNotEnforced"
         conditions = @{
-            userRiskLevels = "high";
-            clientAppTypes = "all";
+            userRiskLevels = "high"
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
                 includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
             }
-        };
+        }
         grantControls = @{
-            operator = "AND";
+            operator = "AND"
             builtInControls = @(
                 "mfa",
                 "passwordChange"
             )
         }
     },
-    # No persistent browser session - this policy is failing with error code 1032: ConditionalActionPolicy validation failed due to InvalidControls.
     @{
-        displayName = "No persistent browser session";
-        state = "enabledForReportingButNotEnforced";
+        displayName = "No persistent browser session"
+        state = "enabledForReportingButNotEnforced"
         conditions = @{
             clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
-            };
+            }
             devices = @{
                 deviceFilter = @{
-                    mode = "include";
+                    mode = "include"
                     rule = "device.trustType -ne `"ServerAD`" -or device.isCompliant -ne True"
                 }
             }
-        };
+        }
         sessionControls = @{
             signInFrequency = @{
-                value = 1;
-                type = "hours";
-                authenticationType = "primaryAndSecondaryAuthentication";
-                frequencyInterval = "timeBased";
+                value = 1
+                type = "hours"
+                authenticationType = "primaryAndSecondaryAuthentication"
+                frequencyInterval = "timeBased"
                 isEnabled = $true
-            };
+            }
             persistentBrowser = @{
-                mode = "never";
+                mode = "never"
                 isEnabled = $true
             }
         }
     },
     # Require phishing-resistant multifactor authentication for admins - this policy is failing with error code 007: Incoming ConditionalAccessPolicy object is null or does not match the schema of ConditionalAccessPolicy type. For examples, please see API documentation at https://docs.microsoft.com/en-us/graph/api/conditionalaccessroot-post-policies?view=graph-rest-1.0.
     @{
-        displayName = "Require phishing-resistant multifactor authentication for admins";
-        state = "enabledForReportingButNotEnforced";
+        displayName = "Require phishing-resistant multifactor authentication for admins"
+        state = "enabledForReportingButNotEnforced"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 includeApplications = "All"
-            };
+            }
             users = @{
-                excludeUsers = $TenantAdminUserId;
+                excludeUsers = $TenantAdminUserId
                 includeRoles = @(
                     "62e90394-69f5-4237-9190-012177145e10",
                     "194ae4cb-b126-40b2-bd5b-6091b380977d",
@@ -319,40 +358,39 @@ $PolicyTemplates = @(
                     "e8611ab8-c189-46e8-94e1-60213ab1f814"
                 )
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
-            authenticationStrength = @{
-                displayName = "Phishing-resistant MFA";
-                description = "Phishing-resistant, Passwordless methods for the strongest authentication, such as a FIDO2 security key";
-                policyType = "builtIn";
-                requirementsSatisfied = "mfa";
-                allowedCombinations = @(
+            authenticationStrength = New-MgPolicyAuthenticationStrengthPolicy -DisplayName "Phishing-resistant MFA" -Description "Phishing-resistant, Passwordless methods for the strongest authentication, such as a FIDO2 security key" -RequirementsSatisfied "mfa" -AllowedCombinations @("windowsHelloForBusiness", "fido2", "x509CertificateMultiFactor")
+            <# authenticationStrength = @{
+                displayName = "Phishing-resistant MFA"
+                description = "Phishing-resistant, Passwordless methods for the strongest authentication, such as a FIDO2 security key"
+                requirementsSatisfied = "mfa"
+	            allowedCombinations = @(
                     "windowsHelloForBusiness",
                     "fido2",
                     "x509CertificateMultiFactor"
                 )
-            }
+            }#>
         }
     },
     @{
-        displayName = "Require devices to be marked as compliant";
-        state = "enabledForReportingButNotEnforced";
+        displayName = "Require devices to be marked as compliant"
+        state = "enabledForReportingButNotEnforced"
         conditions = @{
-            clientAppTypes = "all";
+            clientAppTypes = "all"
             applications = @{
                 "includeApplications" = "Office365"
-            };
+            }
             users = @{
-                includeUsers = "All";
+                includeUsers = "All"
                 excludeUsers = $TenantAdminUserId
-            };
+            }
             platforms = @{
                 includePlatforms = @(
                     "android",
                     "iOS",
                     "windows"
-                );
+                )
                 excludePlatforms = @(
                     "android",
                     "iOS",
@@ -360,10 +398,62 @@ $PolicyTemplates = @(
                     "linux"
                 )
             }
-        };
+        }
         grantControls = @{
-            operator = "OR";
+            operator = "OR"
             builtInControls = "compliantDevice"
+        }
+    },
+    @{
+        displayName = "Block external access to Azure Virtual Desktop"
+        state = "enabled"
+        conditions = @{ 
+            clientAppTypes = "all"
+            applications = @{
+                includeApplications = "9cdead84-a844-4324-93f2-b2e6bb768d07" # Azure Virtual Desktop
+            }
+            users = @{
+                includeUsers = "All"
+            }
+            locations = @{
+                includeLocations = @(
+                    "All"
+                )
+                excludeLocations = @(
+                    "AllTrusted" # AllTrusted is the default named location that includes all trusted locations.
+                    # (Get-MgIdentityConditionalAccessNamedLocation).Id
+                )
+            }
+        }
+        grantControls = @{
+            operator = "OR"
+            builtInControls = "block"
+        }
+    },
+    @{
+        displayName = "Block external access to Egnyte"
+        state = "enabledForReportingButNotEnforced"
+        conditions = @{ 
+            clientAppTypes = "all"
+            applications = @{
+                includeApplications = $EgnyteEnterpriseAppId
+            }
+            users = @{
+                includeUsers = "All"
+            }
+            locations = @{
+                includeLocations = @(
+                    "All"
+                )
+                excludeLocations = @(
+                    "AllTrusted" # AllTrusted is the default named location that includes all trusted locations.
+                    # (Get-MgIdentityConditionalAccessNamedLocation).Id
+                )
+            }
+        }
+        grantControls = @{
+            operator = "OR"
+            builtInControls = "block"
         }
     }
 )
@@ -375,12 +465,7 @@ $PolicyTemplates | ForEach-Object -Process {
         State = $_.state
         Conditions = $_.conditions
         GrantControls = $_.grantcontrols
+        SessionControls = $_.sessioncontrols
     }
     New-MgIdentityConditionalAccessPolicy @Params
 }
-
-
-
-
-
-
