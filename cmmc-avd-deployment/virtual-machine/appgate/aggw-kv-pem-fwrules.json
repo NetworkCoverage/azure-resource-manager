@@ -2,6 +2,12 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "customerShortName": {
+            "type": "string",
+            "metadata": {
+                "description": "The abbreviated name of the customer"
+            }
+        },
         "locationShortName": {
             "allowedValues": [
                 "uga",
@@ -74,7 +80,7 @@
         "publicIpv6AddressName": "[concat('shared-', parameters('locationShortName'), '-aggw-ipv6-pip')]",
         "subnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]",
         "sshKeyName": "[concat('shared-', parameters('locationShortName'), '-appgate-gw-sshkey')]",
-        "keyVaultName": "[concat('shared-', parameters('locationShortName'), '-kv-1')]",
+        "keyVaultName": "[concat(parameters('customerShortName'), '-shared-', parameters('locationShortName'), '-kv-1')]",
         "scriptName":  "[concat('shared-', parameters('locationShortName'), '-appgate-script')]",
         "dnatRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('dnatRuleCollectionGroupName'))]",
         "networkRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('networkRuleCollectionGroupName'))]"
@@ -289,13 +295,15 @@
                 "[variables('vmName')]"
             ],
             "properties": {
-                "priority": 500,
+                "priority": 1000,
                 "ruleCollections": [
                     {
                         "ruleCollectionType": "FirewallPolicyNatRuleCollection",
                         "action": {
                             "type": "Dnat"
                         },
+                        "name": "dnatrules-appgate-allow",
+                        "priority": 1001,
                         "rules": [
                             {
                                 "ruleType": "NatRule",
@@ -355,9 +363,7 @@
                                     "22"
                                 ]
                             }
-                        ],
-                        "name": "dnatrules-appgate-allow",
-                        "priority": 501
+                        ]
                     }
                 ]
             }
@@ -371,13 +377,15 @@
                 "[resourceId('Microsoft.Network/firewallPolicies/ruleCollectionGroups', parameters('fwPolicyName'), parameters('dnatRuleCollectionGroupName'))]"
             ],
             "properties": {
-                "priority": 5000,
+                "priority": 500,
                 "ruleCollections": [
                     {
                         "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
                         "action": {
                             "type": "Allow"
                         },
+                        "name": "networkrules-appgate-allow",
+                        "priority": 501,
                         "rules": [
                             {
                                 "ruleType": "NetworkRule",
@@ -423,9 +431,7 @@
                                     "1023"
                                 ]
                             }
-                        ],
-                        "name": "networkrules-appgate-allow",
-                        "priority": 5100
+                        ]
                     }
                 ]
             }

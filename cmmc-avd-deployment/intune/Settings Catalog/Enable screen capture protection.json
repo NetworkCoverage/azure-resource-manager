@@ -1,0 +1,47 @@
+{
+  "platforms": "windows10",
+  "id": "cd7c9c36-ac26-4b3c-a6c9-64709403be86",
+  "technologies": "mdm",
+  "settingCount": 1,
+  "name": "Enable screen capture protection",
+  "templateReference": {
+    "templateDisplayVersion": null,
+    "templateFamily": "none",
+    "templateDisplayName": null,
+    "templateId": ""
+  },
+  "roleScopeTagIds": [
+    "0"
+  ],
+  "lastModifiedDateTime": "2024-03-05T19:14:19.8193613Z",
+  "creationSource": null,
+  "description": "Prevents users from capturing the screen for sharing",
+  "priorityMetaData": null,
+  "createdDateTime": "2024-03-05T19:14:19.8193613Z",
+  "settings": [
+    {
+      "id": "0",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [
+            {
+              "settingInstanceTemplateReference": null,
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+              "settingDefinitionId": "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_avd_server_screen_capture_protection_level",
+              "choiceSettingValue": {
+                "settingValueTemplateReference": null,
+                "children": [],
+                "value": "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_avd_server_screen_capture_protection_level_1"
+              }
+            }
+          ],
+          "value": "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_1"
+        }
+      }
+    }
+  ]
+}

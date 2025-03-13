@@ -1,0 +1,114 @@
+{
+  "platforms": "windows10",
+  "id": "e25612a5-280f-4a3a-8fb1-d3b84f7b5ff2",
+  "technologies": "mdm",
+  "settingCount": 7,
+  "name": "Configure device and resource redirection",
+  "templateReference": {
+    "templateDisplayVersion": null,
+    "templateFamily": "none",
+    "templateDisplayName": null,
+    "templateId": ""
+  },
+  "roleScopeTagIds": [
+    "0"
+  ],
+  "lastModifiedDateTime": "2024-04-24T16:43:28.9771194Z",
+  "creationSource": null,
+  "description": "",
+  "priorityMetaData": null,
+  "createdDateTime": "2024-03-06T15:36:43.9653147Z",
+  "settings": [
+    {
+      "id": "0",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_time_zone",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_time_zone_1"
+        }
+      }
+    },
+    {
+      "id": "1",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_clipboard",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_clipboard_1"
+        }
+      }
+    },
+    {
+      "id": "2",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_com",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_com_1"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_remotedesktopservices_donotallowdriveredirection",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_remotedesktopservices_donotallowdriveredirection_1"
+        }
+      }
+    },
+    {
+      "id": "4",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_lpt",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_lpt_1"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_smart_card",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_smart_card_1"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_pnp",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_client_pnp_1"
+        }
+      }
+    }
+  ]
+}

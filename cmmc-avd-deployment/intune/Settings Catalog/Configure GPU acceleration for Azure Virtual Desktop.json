@@ -1,0 +1,62 @@
+{
+  "platforms": "windows10",
+  "id": "fca899aa-a0b1-4709-91e4-1ac6c3c2217a",
+  "technologies": "mdm",
+  "settingCount": 3,
+  "name": "Configure GPU acceleration for Azure Virtual Desktop",
+  "templateReference": {
+    "templateDisplayVersion": null,
+    "templateFamily": "none",
+    "templateDisplayName": null,
+    "templateId": ""
+  },
+  "roleScopeTagIds": [
+    "0"
+  ],
+  "lastModifiedDateTime": "2024-03-05T00:31:46.7879054Z",
+  "creationSource": null,
+  "description": "Azure Virtual Desktop supports graphics processing unit (GPU) acceleration in rendering and encoding for improved app performance and scalability. GPU acceleration is crucial for graphics-intensive apps and can be used with all supported operating systems for Azure Virtual Desktop.",
+  "priorityMetaData": null,
+  "createdDateTime": "2024-03-05T00:31:46.7879054Z",
+  "settings": [
+    {
+      "id": "0",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc_hw_encode_preferred",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc_hw_encode_preferred_1"
+        }
+      }
+    },
+    {
+      "id": "1",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc444_mode_preferred",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc444_mode_preferred_1"
+        }
+      }
+    },
+    {
+      "id": "2",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_admx_terminalserver_ts_dx_use_full_hwgpu",
+        "choiceSettingValue": {
+          "settingValueTemplateReference": null,
+          "children": [],
+          "value": "device_vendor_msft_policy_config_admx_terminalserver_ts_dx_use_full_hwgpu_1"
+        }
+      }
+    }
+  ]
+}

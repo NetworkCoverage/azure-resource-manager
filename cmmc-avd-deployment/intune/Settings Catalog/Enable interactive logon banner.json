@@ -1,0 +1,51 @@
+{
+  "platforms": "windows10",
+  "id": "4ac74585-a661-40d8-aaf8-fcec9603367a",
+  "technologies": "mdm",
+  "settingCount": 2,
+  "name": "Enable interactive logon banner",
+  "templateReference": {
+    "templateDisplayVersion": null,
+    "templateFamily": "none",
+    "templateDisplayName": null,
+    "templateId": ""
+  },
+  "roleScopeTagIds": [
+    "0"
+  ],
+  "lastModifiedDateTime": "2024-04-23T15:53:54.6092175Z",
+  "creationSource": null,
+  "description": "Displays interactive logon",
+  "priorityMetaData": null,
+  "createdDateTime": "2024-02-28T15:17:54.0211628Z",
+  "settings": [
+    {
+      "id": "0",
+      "settingInstance": {
+        "simpleSettingCollectionValue": [
+          {
+            "settingValueTemplateReference": null,
+            "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+            "value": "This system is the property of Salas O'Brien and is intended for authorized users only. Employees and users of Salas O'Brien’s Electronic Systems (including desktop computers, laptop computers, servers, mobile devices, email, Internet access, and business applications) should have no expectation of privacy with regard to use of these resources. All individuals’ activities while using Salas O'Brien’s Electronic Systems may be monitored and audited. By signing on and using any of these Electronic Systems, users acknowledge that all data, messages, documents, etc. sent, received, or reviewed while using these Electronic Systems are property of Salas O'Brien. Additionally, this system contains federal contract information and/or Controlled Unclassified Information (CUI). By using this system (which includes any device attached to this system), you consent to abide by Salas O'Brien's policies regarding CUI. You further acknowledge that failure to abide by these terms and usage requirements may result in revoked or suspended access privileges."
+          }
+        ],
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_messagetextforusersattemptingtologon"
+      }
+    },
+    {
+      "id": "1",
+      "settingInstance": {
+        "settingInstanceTemplateReference": null,
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
+        "settingDefinitionId": "device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_messagetitleforusersattemptingtologon",
+        "simpleSettingValue": {
+          "settingValueTemplateReference": null,
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+          "value": "Salas O'Brien Terms of Use"
+        }
+      }
+    }
+  ]
+}
