@@ -4,15 +4,6 @@
     "parameters": {
         "locationShortName": {
             "allowedValues": [
-                "cu",
-                "eu1",
-                "eu2",
-                "ncu",
-                "scu",
-                "wcu",
-                "wu1",
-                "wu2",
-                "wu3",
                 "uga",
                 "ugt",
                 "ugv"
@@ -113,7 +104,10 @@
                     "[cidrSubnet(parameters('vnetIpv6AddressSpace'), 64, copyIndex())]"
                 ],
                 "privateEndpointNetworkPolicies": "Disabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "routeTable": {
+                    "id": "[resourceId('Microsoft.Network/routeTables', concat('shared-', parameters('locationShortName'),'-rt-1'))]"
+                }
             },
             "copy": {
                 "name": "subnetCopy",
@@ -121,7 +115,8 @@
                 "mode": "Serial"
             },
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', concat('shared-', parameters('locationShortName'), '-vnet-1'))]"
+                "[resourceId('Microsoft.Network/virtualNetworks', concat('shared-', parameters('locationShortName'), '-vnet-1'))]",
+                "[resourceId('Microsoft.Network/routeTables', concat('shared-', parameters('locationShortName'),'-rt-1'))]"
             ]
         },
         // vnet diagnostic settings
