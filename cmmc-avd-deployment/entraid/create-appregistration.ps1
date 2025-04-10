@@ -105,14 +105,8 @@ New-AzRoleAssignment @RoleAssignmentParams
 Write-Host "✅` Assigned 'User Access Administrator' role at subscription scope."
 
 # Create a client secret
-$SecretDescription = "Secret for use with DeploymentScript ARM resource"
 $Expiry = (Get-Date).AddDays(180)
-$AppCredParams =  @{
-    ApplicationId = $App.AppId
-    CustomKeyIdentifier = $SecretDescription
-    EndDate = $Expiry
-}
- $PasswordCred = New-AzADAppCredential @AppCredParams
+$PasswordCred = New-AzADAppCredential -ApplicationId $App.AppId -EndDate $Expiry
 
 # Output App ID and Secret Value
 Write-Host "`n🔐` Application created and credentials generated successfully:`n"
