@@ -83,8 +83,16 @@ if ($GrantConsent) {
     }
 }
 else {
-    Start-Process ("https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/apiPermissions/appId/{0}/isMSAApp~/false" -f $App.AppId)
-    Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
+    $ConsentUrl = "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/apiPermissions/appId/{0}/isMSAApp~/false" -f $App.AppId
+
+    if ($IsCloudShell) {
+        Write-Host "`n🔗 Grant consent manually by visiting the following URL:`n$ConsentUrl`n"
+        Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
+    }
+    else {
+        Start-Process $ConsentUrl
+        Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
+    }
 }
 
 # Assign RBAC role
