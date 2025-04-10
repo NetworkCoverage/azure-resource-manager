@@ -3,7 +3,7 @@ param (
     [string]$DisplayName,
 
     [Parameter()]
-    [ValidateSet("AzureCloud", "AzureChinaCloud", "AzureUSGovernment", "AzureGermanyCloud")]
+    [ValidateSet("AzureCloud", "AzureUSGovernment")]
     [string]$Environment = "AzureCloud",
 
     [switch]$GrantConsent
@@ -52,8 +52,14 @@ Write-Host "🔐` Microsoft Graph permissions assigned."
 
 # Admin consent
 if ($GrantConsent) {
+    switch ($Context.Environment.Name) {
+        "AzureCloud" { $GraphResourceUrl = "https://graph.microsoft.com" }
+        "AzureUSGovernment" { $GraphResourceUrl = "https://graph.microsoft.us" }
+        default { throw "Unsupported Azure environment: $Environment" }
+    }
+
     Write-Host "🔁 Attempting to automatically grant admin consent..."
-    $Token = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -Environment $Environment).Token
+    $Token = (Get-AzAccessToken -ResourceUrl $GraphResourceUrl).Token
     $Headers = @{ Authorization = "Bearer $Token"; "Content-Type" = "application/json" }
 
     $GraphSp = Invoke-RestMethod -Uri ("https://graph.microsoft.com/v1.0/servicePrincipals?filter=appId eq '{0}'" -f $GraphAppId) -Headers $Headers
