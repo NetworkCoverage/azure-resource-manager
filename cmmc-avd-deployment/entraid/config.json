@@ -1,8 +1,0 @@
-{
-  "tenantID": "",
-  "appName": "",
-  "hostname": "https://",
-  "useMailsOnline": false,
-  "useSCIM": false,
-  "oneTimePasswordServiceUri": "https://onetimepass.domaincrawler.com/" 
-}
