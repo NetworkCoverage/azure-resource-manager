@@ -60,7 +60,7 @@ if ($GrantConsent) {
     $GraphSpId = $GraphSp.value[0].id
 
     $RoleIds = @(
-        "06da0dbc-49e2-44d2-8312-53f166ab848a", # RoleManagement.ReadWrite.Directory
+        "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8", # RoleManagement.ReadWrite.Directory
         "7ab1d382-f21e-4acd-a863-ba3e13f7da61"  # Directory.Read.All
     )
 
