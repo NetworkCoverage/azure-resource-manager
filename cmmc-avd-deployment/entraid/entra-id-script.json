@@ -44,7 +44,7 @@
             "kind": "AzurePowerShell",
             "properties": {
                 "forceUpdateTag": "1",
-                "azPowerShellVersion": "13.4.0",
+                "azPowerShellVersion": "13.2",
                 "arguments": "-TenantId \\\"[parameters('tenantID')]\\\" -ApplicationId \\\"[parameters('applicationId')]\\\" -ClientSecret \\\"[parameters('clientSecret')]\\\" -CompanyName \\\"[parameters('companyName')]\\\" -SubscriptionId \\\"[parameters('subscriptionId')]\\\"",
                 "primaryScriptUri": "https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/main/cmmc-avd-deployment/entraid/configure-entraidgroups.ps1",
                 "timeout": "PT30M",

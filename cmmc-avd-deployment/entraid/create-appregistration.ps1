@@ -13,7 +13,7 @@ param (
 $IsCloudShell = $false
 if ($env:ACC_CLOUD -or $env:AZUREPS_HOST_ENVIRONMENT -like "*CloudShell*") {
     $IsCloudShell = $true
-    Write-Host "☁️` Running in Azure Cloud Shell. Using existing authenticated context."
+    Write-Host "☁️ Running in Azure Cloud Shell. Using existing authenticated context."
 }
 
 # Try to get current Az context
@@ -21,18 +21,18 @@ $Context = Get-AzContext -ErrorAction SilentlyContinue
 
 # Authenticate if not in Cloud Shell and no context is available
 if (-not $IsCloudShell -and -not $Context) {
-    Write-Host "🔐` No Azure context found. Attempting interactive login..."
+    Write-Host "🔐 No Azure context found. Attempting interactive login..."
     Connect-AzAccount -Environment $Environment
     $Context = Get-AzContext
 }
 
 # Register the app
 $App = New-AzADApplication -DisplayName $DisplayName
-Write-Host ("✅` App registered: {0}" -f $App.AppId)
+Write-Host ("✅ App registered: {0}" -f $App.AppId)
 
 # Create the service principal
 $Sp = New-AzADServicePrincipal -ApplicationId $App.AppId
-Write-Host ("✅` Service principal created: {0}" -f $Sp.Id)
+Write-Host ("✅ Service principal created: {0}" -f $Sp.Id)
 
 # Define Microsoft Graph permissions
 $GraphAppId = "00000003-0000-0000-c000-000000000000"
@@ -48,21 +48,27 @@ Set-AzADApplication -ObjectId $App.Id -RequiredResourceAccess @(
         ResourceAccess = $Permissions
     }
 )
-Write-Host "🔐` Microsoft Graph permissions assigned."
+Write-Host "🔐 Microsoft Graph permissions assigned."
 
 # Admin consent
 if ($GrantConsent) {
+    # Determine Microsoft Graph endpoint based on environment
     switch ($Context.Environment.Name) {
-        "AzureCloud" { $GraphResourceUrl = "https://graph.microsoft.com" }
+        "AzureCloud"        { $GraphResourceUrl = "https://graph.microsoft.com" }
         "AzureUSGovernment" { $GraphResourceUrl = "https://graph.microsoft.us" }
-        default { throw "Unsupported Azure environment: $Environment" }
+        default             { throw "❌ Unsupported Azure environment: $Environment" }
     }
 
     Write-Host "🔁 Attempting to automatically grant admin consent..."
-    $Token = (Get-AzAccessToken -ResourceUrl $GraphResourceUrl).Token
+    $Token = (Get-AzAccessToken -ResourceUrl $GraphResourceUrl -Environment $Environment).Token
     $Headers = @{ Authorization = "Bearer $Token"; "Content-Type" = "application/json" }
 
-    $GraphSp = Invoke-RestMethod -Uri ("https://graph.microsoft.com/v1.0/servicePrincipals?filter=appId eq '{0}'" -f $GraphAppId) -Headers $Headers
+    # Use dynamic Graph endpoint
+    $GraphSpParams = @{
+        Uri     = ("{0}/v1.0/servicePrincipals?filter=appId eq '{1}'" -f $GraphResourceUrl, $GraphAppId)
+        Headers = $Headers
+    }
+    $GraphSp = Invoke-RestMethod @GraphSpParams
     $GraphSpId = $GraphSp.value[0].id
 
     $RoleIds = @(
@@ -73,12 +79,12 @@ if ($GrantConsent) {
     foreach ($RoleId in $RoleIds) {
         $Payload = @{
             principalId = $Sp.Id
-            resourceId = $GraphSpId
-            appRoleId  = $RoleId
+            resourceId  = $GraphSpId
+            appRoleId   = $RoleId
         } | ConvertTo-Json -Depth 3
 
         $ConsentParams = @{
-            Uri     = ("https://graph.microsoft.com/v1.0/servicePrincipals/{0}/appRoleAssignments" -f $Sp.Id)
+            Uri     = ("{0}/v1.0/servicePrincipals/{1}/appRoleAssignments" -f $GraphResourceUrl, $Sp.Id)
             Method  = "POST"
             Headers = $Headers
             Body    = $Payload
@@ -93,11 +99,11 @@ else {
 
     if ($IsCloudShell) {
         Write-Host "`n🔗 Grant consent manually by visiting the following URL:`n$ConsentUrl`n"
-        Write-Warning "⚠️` Admin consent must be granted manually unless you use the -GrantConsent switch."
+        Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
     }
     else {
         Start-Process $ConsentUrl
-        Write-Warning "⚠️` Admin consent must be granted manually unless you use the -GrantConsent switch."
+        Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
     }
 }
 
@@ -108,14 +114,14 @@ $RoleAssignmentParams = @{
     Scope              = "/subscriptions/{0}" -f $Context.Subscription.Id
 }
 New-AzRoleAssignment @RoleAssignmentParams
-Write-Host "✅` Assigned 'User Access Administrator' role at subscription scope."
+Write-Host "✅ Assigned 'User Access Administrator' role at subscription scope."
 
 # Create a client secret
 $Expiry = (Get-Date).AddDays(180)
 $PasswordCred = New-AzADAppCredential -ApplicationId $App.AppId -EndDate $Expiry
 
 # Output App ID and Secret Value
-Write-Host "`n🔐` Application created and credentials generated successfully:`n"
+Write-Host "`n🔐 Application created and credentials generated successfully:`n"
 Write-Host ("  AppId        : {0}" -f $App.AppId)
 Write-Host ("  ClientSecret : {0}" -f $PasswordCred.SecretText)
 Write-Host ("  TenantId     : {0}" -f $Context.Tenant.Id)
