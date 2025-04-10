@@ -26,13 +26,6 @@ if (-not $IsCloudShell -and -not $Context) {
     $Context = Get-AzContext
 }
 
-# Set Graph Resource URL based on Environment
-switch ($Environment) {
-    "AzureCloud" { $GraphResourceUrl = "https://graph.microsoft.com" }
-    "AzureUSGovernment" { $GraphResourceUrl = "https://graph.microsoft.us" }
-    default { throw "Unsupported Azure environment: $Environment" }
-}
-
 # Register the app
 $App = New-AzADApplication -DisplayName $DisplayName
 Write-Host ("✅ App registered: {0}" -f $App.AppId)
@@ -51,17 +44,27 @@ $Permissions = @(
 # Apply Graph permissions
 Set-AzADApplication -ObjectId $App.Id -RequiredResourceAccess @(
     @{
-        ResourceAppId = $GraphAppId
-        ResourceAccess = $Permissions
+        ResourceAppId   = $GraphAppId
+        ResourceAccess  = $Permissions
     }
 )
 Write-Host "🔐 Microsoft Graph permissions assigned."
 
-# Admin consent
+# Admin consent (optional)
 if ($GrantConsent) {
     Write-Host "🔁 Attempting to automatically grant admin consent..."
+
+    switch ($Context.Environment.Name) {
+        "AzureCloud"        { $GraphResourceUrl = "https://graph.microsoft.com" }
+        "AzureUSGovernment" { $GraphResourceUrl = "https://graph.microsoft.us" }
+        default             { throw "❌ Unsupported Azure environment: $($Context.Environment.Name)" }
+    }
+
     $Token = (Get-AzAccessToken -ResourceUrl $GraphResourceUrl).Token
-    $Headers = @{ Authorization = "Bearer $Token"; "Content-Type" = "application/json" }
+    $Headers = @{
+        Authorization = "Bearer $Token"
+        "Content-Type" = "application/json"
+    }
 
     $GraphSp = Invoke-RestMethod -Uri ("{0}/v1.0/servicePrincipals?filter=appId eq '{1}'" -f $GraphResourceUrl, $GraphAppId) -Headers $Headers
     $GraphSpId = $GraphSp.value[0].id
@@ -74,8 +77,8 @@ if ($GrantConsent) {
     foreach ($RoleId in $RoleIds) {
         $Payload = @{
             principalId = $Sp.Id
-            resourceId = $GraphSpId
-            appRoleId  = $RoleId
+            resourceId  = $GraphSpId
+            appRoleId   = $RoleId
         } | ConvertTo-Json -Depth 3
 
         $ConsentParams = @{
@@ -115,7 +118,7 @@ Write-Host "✅ Assigned 'User Access Administrator' role at subscription scope.
 $Expiry = (Get-Date).AddDays(180)
 $PasswordCred = New-AzADAppCredential -ApplicationId $App.AppId -EndDate $Expiry
 
-# Output App ID and Secret Value
+# Output credentials
 Write-Host "`n🔐 Application created and credentials generated successfully:`n"
 Write-Host ("  AppId        : {0}" -f $App.AppId)
 Write-Host ("  ClientSecret : {0}" -f $PasswordCred.SecretText)
