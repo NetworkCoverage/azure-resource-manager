@@ -13,7 +13,7 @@ param (
 $IsCloudShell = $false
 if ($env:ACC_CLOUD -or $env:AZUREPS_HOST_ENVIRONMENT -like "*CloudShell*") {
     $IsCloudShell = $true
-    Write-Host "☁️ Running in Azure Cloud Shell. Using existing authenticated context."
+    Write-Host "☁️` Running in Azure Cloud Shell. Using existing authenticated context."
 }
 
 # Try to get current Az context
@@ -21,18 +21,18 @@ $Context = Get-AzContext -ErrorAction SilentlyContinue
 
 # Authenticate if not in Cloud Shell and no context is available
 if (-not $IsCloudShell -and -not $Context) {
-    Write-Host "🔐 No Azure context found. Attempting interactive login..."
+    Write-Host "🔐` No Azure context found. Attempting interactive login..."
     Connect-AzAccount -Environment $Environment
     $Context = Get-AzContext
 }
 
 # Register the app
 $App = New-AzADApplication -DisplayName $DisplayName
-Write-Host ("✅ App registered: {0}" -f $App.AppId)
+Write-Host ("✅` App registered: {0}" -f $App.AppId)
 
 # Create the service principal
 $Sp = New-AzADServicePrincipal -ApplicationId $App.AppId
-Write-Host ("✅ Service principal created: {0}" -f $Sp.Id)
+Write-Host ("✅` Service principal created: {0}" -f $Sp.Id)
 
 # Define Microsoft Graph permissions
 $GraphAppId = "00000003-0000-0000-c000-000000000000"
@@ -48,7 +48,7 @@ Set-AzADApplication -ObjectId $App.Id -RequiredResourceAccess @(
         ResourceAccess = $Permissions
     }
 )
-Write-Host "🔐 Microsoft Graph permissions assigned."
+Write-Host "🔐` Microsoft Graph permissions assigned."
 
 # Admin consent
 if ($GrantConsent) {
@@ -87,11 +87,11 @@ else {
 
     if ($IsCloudShell) {
         Write-Host "`n🔗 Grant consent manually by visiting the following URL:`n$ConsentUrl`n"
-        Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
+        Write-Warning "⚠️` Admin consent must be granted manually unless you use the -GrantConsent switch."
     }
     else {
         Start-Process $ConsentUrl
-        Write-Warning "⚠️ Admin consent must be granted manually unless you use the -GrantConsent switch."
+        Write-Warning "⚠️` Admin consent must be granted manually unless you use the -GrantConsent switch."
     }
 }
 
@@ -102,14 +102,14 @@ $RoleAssignmentParams = @{
     Scope              = "/subscriptions/{0}" -f $Context.Subscription.Id
 }
 New-AzRoleAssignment @RoleAssignmentParams
-Write-Host "✅ Assigned 'User Access Administrator' role at subscription scope."
+Write-Host "✅` Assigned 'User Access Administrator' role at subscription scope."
 
 # Create a client secret
 $SecretDisplayName = "Secret for use with DeploymentScript ARM resource"
 $PasswordCred = New-AzADAppCredential -ApplicationId $App.AppId -DisplayName $SecretDisplayName
 
 # Output App ID and Secret Value
-Write-Host "`n🔐 Application created and credentials generated successfully:`n"
+Write-Host "`n🔐` Application created and credentials generated successfully:`n"
 Write-Host ("  AppId        : {0}" -f $App.AppId)
 Write-Host ("  ClientSecret : {0}" -f $PasswordCred.SecretText)
 Write-Host ("  TenantId     : {0}" -f $Context.Tenant.Id)
