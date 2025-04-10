@@ -37,7 +37,7 @@ Write-Host ("✅ Service principal created: {0}" -f $Sp.Id)
 # Define Microsoft Graph permissions
 $GraphAppId = "00000003-0000-0000-c000-000000000000"
 $Permissions = @(
-    @{ Id = "06da0dbc-49e2-44d2-8312-53f166ab848a"; Type = "Role" }, # RoleManagement.ReadWrite.Directory
+    @{ Id = "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8"; Type = "Role" }, # RoleManagement.ReadWrite.Directory
     @{ Id = "7ab1d382-f21e-4acd-a863-ba3e13f7da61"; Type = "Role" }  # Directory.Read.All
 )
 
