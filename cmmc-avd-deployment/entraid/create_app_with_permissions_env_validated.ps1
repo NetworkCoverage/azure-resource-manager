@@ -27,7 +27,7 @@ if (-not $IsCloudShell -and -not $Context) {
 }
 
 # Register the app
-$App = New-AzADApplication -DisplayName $DisplayName -IdentifierUris ("api://{0}" -f [guid]::NewGuid()) -AvailableToOtherTenants $false
+$App = New-AzADApplication -DisplayName $DisplayName -AvailableToOtherTenants $false
 Write-Host ("✅ App registered: {0}" -f $App.AppId)
 
 # Create the service principal
