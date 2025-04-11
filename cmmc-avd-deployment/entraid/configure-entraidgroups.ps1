@@ -99,17 +99,17 @@ $GroupSets = @{
     }
     RbacGroups = @{
         OwnerGroup = @{
-            DisplayName = "Owner"
+            DisplayName = "Owner RBAC Role Assignments"
             Description = "Members will be assigned to the Owner role for the subscription(s)."
             Roles = "Owner"
         }
         ContributorGroup = @{
-            DisplayName = "Contributor"
+            DisplayName = "Contributor RBAC Role Assignments"
             Description = "Members will be assigned to the Contributor role."
             Roles = "Contributor"
         }
         BillingReaderGroup = @{
-            DisplayName = "Billing Reader"
+            DisplayName = "Billing Reader RBAC Role Assignments"
             Description = "Members will be assigned to the Billing Reader role."
             Roles = "Billing Reader"
         }
