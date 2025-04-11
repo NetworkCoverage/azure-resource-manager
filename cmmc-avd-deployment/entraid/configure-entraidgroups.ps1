@@ -1,5 +1,5 @@
 param (
-    [Parameter(Mandatory = $true)]
+   <#  [Parameter(Mandatory = $true)]
     [string]$TenantId,
 
     [Parameter(Mandatory = $true)]
@@ -9,12 +9,12 @@ param (
     [string]$ClientSecret,
 
     [Parameter(Mandatory = $true)]
-    [string]$CompanyName,
-
+    [string]$SubscriptionId,
+ #>
     [Parameter(Mandatory = $true)]
-    [string]$SubscriptionId
+    [string]$CompanyName
 )
-
+<# 
 # Authenticate to Microsoft Graph
 $SecuredPassword = ConvertTo-SecureString -String $ClientSecret -AsPlainText -Force
 $ClientSecretCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $ApplicationId, $SecuredPassword
@@ -25,6 +25,8 @@ Connect-AzAccount -ServicePrincipal -TenantId $TenantId -ApplicationId $Applicat
 
 # Initialize output
 $DeploymentScriptOutputs = @{}
+ #>
+Connect-MgGraph -Environment USGov 
 
 # All groups defined here
 $GroupSets = @{
@@ -153,7 +155,7 @@ foreach ($GroupType in $GroupSets.Keys) {
             $RoleParams = @{
                 ObjectId = $CreatedGroup.Id
                 RoleDefinitionName = $Group.Roles
-                Scope = "/subscriptions/$SubscriptionId"
+                Scope = ('/subscriptions/{0}' -f (Get-AzContext).Subscription.Id)
             }
             New-AzRoleAssignment @RoleParams
         }
@@ -161,4 +163,4 @@ foreach ($GroupType in $GroupSets.Keys) {
 }
 
 # Output all group IDs
-$DeploymentScriptOutputs
+#$DeploymentScriptOutputs

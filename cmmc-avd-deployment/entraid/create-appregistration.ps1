@@ -76,6 +76,8 @@ if ($GrantConsent) {
         $GraphSpId = $GraphSp.id
     }
     catch {
+        #New-AzADServicePrincipal -ApplicationId "00000003-0000-0000-c000-000000000000"
+
         Write-Warning "⚠️ Microsoft Graph service principal not found. Attempting to create it via legacy AAD Graph API..."
 
         # POST to create the Microsoft Graph SP
