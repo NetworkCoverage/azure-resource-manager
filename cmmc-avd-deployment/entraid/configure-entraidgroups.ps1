@@ -3,6 +3,11 @@ param (
     [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
     [string]$CompanyName,
 
+    [Parameter(Mandatory = $true, ParameterSetName = 'Default')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
+    [ValidateSet("AzureCloud", "AzureUSGovernment")]
+    [string]$Environment = "AzureCloud",
+
     [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
     [string]$ApplicationId,
 
@@ -16,38 +21,56 @@ param (
 
 'Microsoft.Graph.Groups', 'Microsoft.Graph.DirectoryManagement', 'Microsoft.Graph.Identity.Governance' | ForEach-Object {
     if (-not (Get-Module -ListAvailable -Name $_)) {
-        Write-Host "📦 Installing missing module: $_..."
+        Write-Host "Installing missing module: $_..."
         Install-Module -Name $_ -Scope CurrentUser -Force
     }
     Import-Module $_ -Force
 }
 
+$ConnectMgGraphParams = @{
+    NoWelcome = $true
+}
+$ConnectAzAccountParams = @{
+    Environment = $Environment
+}
+
 switch ($PSCmdlet.ParameterSetName) {
     'DeploymentScript' {
-        # Authenticate using client secret (Deployment Script mode)
         $SecuredPassword = ConvertTo-SecureString -String $ClientSecret -AsPlainText -Force
         $ClientSecretCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $ApplicationId, $SecuredPassword
-
-        Write-Host "🔐 Connecting to Microsoft Graph using client credentials..."
-        Connect-MgGraph -Environment USGov -ClientSecretCredential $ClientSecretCredential -NoWelcome
-
-        Write-Host "🔐 Connecting to Azure for RBAC using service principal..."
-        Connect-AzAccount -ServicePrincipal -ApplicationId $ApplicationId -Credential $ClientSecretCredential
-
-        $DeploymentScriptOutputs = @{}
+        $ConnectMgGraphParams['ClientSecretCredential'] = $ClientSecretCredential
+        if ($Environment -eq "AzureUSGovernment") {
+            $ConnectMgGraphParams['Environment'] = "USGov"
+        }
+        Write-Host "Connecting to Microsoft Graph using client credentials..."
+        
+        $ConnectAzAccountParams['ServicePrincipal'] = $true
+        $ConnectAzAccountParams['ApplicationId'] = $ApplicationId
+        $ConnectAzAccountParams['Credential'] = $ClientSecretCredential
+        Write-Host "Connecting to Azure for RBAC using service principal..."
     }
 
     'Default' {
-        if ($env:ACC_CLOUD == "AzureCloudShell") {
-            Write-Host "☁️ Detected Cloud Shell environment. Using current context for Microsoft Graph..."
-            Connect-MgGraph -Environment USGov
+        $isCloudShell = ($env:ACC_CLOUD -or $env:AZUREPS_HOST_ENVIRONMENT -like "*CloudShell*")
+        if ($isCloudShell) {
+            if ($Environment -eq "AzureUSGovernment") {
+                $ConnectMgGraphParams['Environment'] = "USGov"
+            }
+            Write-Host "Detected Cloud Shell environment. Using current context for Microsoft Graph..."
         }
         else {
-            Write-Host "🧑‍💻 Using interactive login with required scopes..."
-            Connect-MgGraph -Scopes "Group.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
+            $ConnectMgGraphParams['Scopes'] = "Group.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
+            if ($Environment -eq "AzureUSGovernment") {
+                $ConnectMgGraphParams['Environment'] = "USGov"
+            }
+            Write-Host "Using interactive login with required scopes..."
         }
     }
 }
+
+# Connect to Microsoft Graph and Azure
+Connect-MgGraph @ConnectMgGraphParams
+Connect-AzAccount @ConnectAzAccountParams
 
 # Check for required licensns in tenant
 $licenses = Get-MgSubscribedSku
@@ -59,9 +82,8 @@ $requiredLicenses = @(
 )
 
 if (-not ($licenses.SkuPartNumber -match ($requiredLicenses -join '|'))) {
-    throw "❌ Required Microsoft Entra P2 or Governance license not found in tenant. Please assign a valid license before running this script."
+    throw "Required Microsoft Entra P2 or Governance license not found in tenant. Please assign a valid license before running this script."
 }
-
 
 # All groups defined here
 $GroupSets = @{
@@ -154,7 +176,9 @@ foreach ($GroupType in $GroupSets.Keys) {
         }
 
         $CreatedGroup = New-MgGroup @Params
-        #$DeploymentScriptOutputs[$GroupKey] = $CreatedGroup.Id
+        if ($PSCmdlet.ParameterSetName -eq 'DeploymentScript') {
+            $DeploymentScriptOutputs[$GroupKey] = $CreatedGroup.Id
+        }
 
         # Handle PIM role assignments
         if ($GroupType -eq 'PimGroups') {
