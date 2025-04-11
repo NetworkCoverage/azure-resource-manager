@@ -1,32 +1,67 @@
 param (
-   <#  [Parameter(Mandatory = $true)]
-    [string]$TenantId,
+    [Parameter(Mandatory = $true, ParameterSetName = 'Default')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
+    [string]$CompanyName,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
     [string]$ApplicationId,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
     [string]$ClientSecret,
 
-    [Parameter(Mandatory = $true)]
-    [string]$SubscriptionId,
- #>
-    [Parameter(Mandatory = $true)]
-    [string]$CompanyName
+    [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]
+    [switch]$DeploymentScriptMode
 )
-<# 
-# Authenticate to Microsoft Graph
-$SecuredPassword = ConvertTo-SecureString -String $ClientSecret -AsPlainText -Force
-$ClientSecretCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $ApplicationId, $SecuredPassword
-Connect-MgGraph -TenantId $TenantId -Environment USGov -ClientSecretCredential $ClientSecretCredential -NoWelcome
 
-# Authenticate to Azure for RBAC assignments
-Connect-AzAccount -ServicePrincipal -TenantId $TenantId -ApplicationId $ApplicationId -Credential $ClientSecretCredential
 
-# Initialize output
-$DeploymentScriptOutputs = @{}
- #>
-Connect-MgGraph -Environment USGov 
+'Microsoft.Graph.Groups', 'Microsoft.Graph.DirectoryManagement', 'Microsoft.Graph.Identity.Governance' | ForEach-Object {
+    if (-not (Get-Module -ListAvailable -Name $_)) {
+        Write-Host "📦 Installing missing module: $_..."
+        Install-Module -Name $_ -Scope CurrentUser -Force
+    }
+    Import-Module $_ -Force
+}
+
+switch ($PSCmdlet.ParameterSetName) {
+    'DeploymentScript' {
+        # Authenticate using client secret (Deployment Script mode)
+        $SecuredPassword = ConvertTo-SecureString -String $ClientSecret -AsPlainText -Force
+        $ClientSecretCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $ApplicationId, $SecuredPassword
+
+        Write-Host "🔐 Connecting to Microsoft Graph using client credentials..."
+        Connect-MgGraph -Environment USGov -ClientSecretCredential $ClientSecretCredential -NoWelcome
+
+        Write-Host "🔐 Connecting to Azure for RBAC using service principal..."
+        Connect-AzAccount -ServicePrincipal -ApplicationId $ApplicationId -Credential $ClientSecretCredential
+
+        $DeploymentScriptOutputs = @{}
+    }
+
+    'Default' {
+        if ($env:ACC_CLOUD == "AzureCloudShell") {
+            Write-Host "☁️ Detected Cloud Shell environment. Using current context for Microsoft Graph..."
+            Connect-MgGraph -Environment USGov
+        }
+        else {
+            Write-Host "🧑‍💻 Using interactive login with required scopes..."
+            Connect-MgGraph -Scopes "Group.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
+        }
+    }
+}
+
+# Check for required licensns in tenant
+$licenses = Get-MgSubscribedSku
+
+$requiredLicenses = @(
+    'AAD_PREMIUM_P2',               # For Entra PIM features
+    'ENTERPRISE_MOBILITY_S5',      # Microsoft Entra ID Governance
+    'AAD_GOV_PREMIUM_P2'           # If you're in USGov and it's named differently
+)
+
+if (-not ($licenses.SkuPartNumber -match ($requiredLicenses -join '|'))) {
+    throw "❌ Required Microsoft Entra P2 or Governance license not found in tenant. Please assign a valid license before running this script."
+}
+
 
 # All groups defined here
 $GroupSets = @{
@@ -119,7 +154,7 @@ foreach ($GroupType in $GroupSets.Keys) {
         }
 
         $CreatedGroup = New-MgGroup @Params
-        $DeploymentScriptOutputs[$GroupKey] = $CreatedGroup.Id
+        #$DeploymentScriptOutputs[$GroupKey] = $CreatedGroup.Id
 
         # Handle PIM role assignments
         if ($GroupType -eq 'PimGroups') {
