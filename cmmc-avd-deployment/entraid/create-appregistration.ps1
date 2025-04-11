@@ -3,8 +3,8 @@ param (
     [string]$DisplayName,
 
     [Parameter()]
-    [ValidateSet("AzureCloud", "AzureUSGovernment")]
-    [string]$Environment = "AzureCloud",
+    [ValidateSet('AzureCloud', 'AzureUSGovernment')]
+    [string]$Environment = 'AzureCloud',
 
     [switch]$GrantConsent
 )
@@ -54,21 +54,52 @@ Write-Host "🔐 Microsoft Graph permissions assigned."
 if ($GrantConsent) {
     Write-Host "🔁 Attempting to automatically grant admin consent..."
 
+    # Determine the proper Microsoft Graph resource URL
     switch ($Context.Environment.Name) {
-        "AzureCloud"        { $GraphResourceUrl = "https://graph.microsoft.com" }
-        "AzureUSGovernment" { $GraphResourceUrl = "https://graph.microsoft.us" }
+        "AzureCloud"        { $GraphResourceUrl = "https://graph.microsoft.com"; $AADGraphBaseUrl = "https://graph.windows.net" }
+        "AzureUSGovernment" { $GraphResourceUrl = "https://graph.microsoft.us";   $AADGraphBaseUrl = "https://graph.windows.net" }
         default             { throw "❌ Unsupported Azure environment: $($Context.Environment.Name)" }
     }
 
+    # Get access token for AAD Graph (legacy) to create SP if missing
+    $AADGraphToken = (Get-AzAccessToken -ResourceUrl "https://graph.windows.net").Token
+    $GraphSpId = $null
+
+    # Try getting Microsoft Graph SP from the tenant
+    $GraphSpUrl = "$GraphResourceUrl/v1.0/servicePrincipals?`$filter=appId eq '$GraphAppId'"
     $Token = (Get-AzAccessToken -ResourceUrl $GraphResourceUrl).Token
-    $Headers = @{
-        Authorization = "Bearer $Token"
-        "Content-Type" = "application/json"
+    $Headers = @{ Authorization = "Bearer $Token"; "Content-Type" = "application/json" }
+
+    try {
+        $GraphSp = Invoke-RestMethod -Uri $GraphSpUrl -Headers $Headers
+        $GraphSp = $GraphSp.value | Where-Object { $_.appId -eq $GraphAppId <# -and $_.appDisplayName -eq "Microsoft Graph" #> } #$GraphSpId = $GraphSp.value[0].id
+        $GraphSpId = $GraphSp.id
+    }
+    catch {
+        Write-Warning "⚠️ Microsoft Graph service principal not found. Attempting to create it via legacy AAD Graph API..."
+
+        # POST to create the Microsoft Graph SP
+        $SpCreatePayload = @{
+            appId          = $GraphAppId
+            accountEnabled = $true
+        } | ConvertTo-Json -Depth 3
+
+        $CreateSpHeaders = @{
+            Authorization = "Bearer $AADGraphToken"
+            "Content-Type" = "application/json"
+        }
+
+        $AADGraphSpUri = "$AADGraphBaseUrl/$($Context.Tenant.Id)/servicePrincipals?api-version=1.6"
+        Invoke-RestMethod -Uri $AADGraphSpUri -Method Post -Headers $CreateSpHeaders -Body $SpCreatePayload | Out-Null
+        Start-Sleep -Seconds 5
+
+        # Retry getting the Microsoft Graph SP
+        $GraphSp = Invoke-RestMethod -Uri $GraphSpUrl -Headers $Headers
+        $GraphSp = $GraphSp.value | Where-Object {$_.appId -eq $GraphAppId}
+        $GraphSpId = $GraphSp.id
     }
 
-    $GraphSp = Invoke-RestMethod -Uri ("{0}/v1.0/servicePrincipals?filter=appId eq '{1}'" -f $GraphResourceUrl, $GraphAppId) -Headers $Headers
-    $GraphSpId = $GraphSp.value[0].id
-
+    # Grant app roles to our SP
     $RoleIds = @(
         "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8", # RoleManagement.ReadWrite.Directory
         "7ab1d382-f21e-4acd-a863-ba3e13f7da61"  # Directory.Read.All
@@ -82,7 +113,7 @@ if ($GrantConsent) {
         } | ConvertTo-Json -Depth 3
 
         $ConsentParams = @{
-            Uri     = ("{0}/v1.0/servicePrincipals/{1}/appRoleAssignments" -f $GraphResourceUrl, $Sp.Id)
+            Uri     = "$GraphResourceUrl/v1.0/servicePrincipals/$($Sp.Id)/appRoleAssignments"
             Method  = "POST"
             Headers = $Headers
             Body    = $Payload
