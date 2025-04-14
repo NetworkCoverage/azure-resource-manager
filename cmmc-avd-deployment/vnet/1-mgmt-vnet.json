@@ -1,0 +1,432 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetIpv4AddressSpace": {
+            "type": "string",
+            "defaultValue": "172.16.0.0/16",
+            "metadata": {
+                "description": "The network address for the virtual network."
+            }
+        }
+    },
+    "variables": {
+        "copy": [
+            {
+                "name": "afwPipNameCopy",
+                "count": 2,
+                "input": "[concat('mgmt-', resourceGroup().location, '-afw-pip-', copyIndex('afwPipNameCopy', 1))]"
+            }
+        ],
+        "workspacesApiVersion": "2023-09-01",
+        "routeTablesApiVersion": "2024-05-01",
+        "virtualNetworksApiVersion": "2024-05-01",
+        "subnetsApiVersion": "2024-05-01",
+        "diagnosticSettingsApiVersion": "2021-05-01-preview",
+        "pipApiVersion": "2024-05-01",
+        "bastionApiVersion": "2024-05-01",
+        "firewallPoliciesApiVersion": "2024-03-01",
+        "ruleCollectionGroupsApiVersion": "2024-03-01",
+        "azureFirewallsApiVersion": "2024-05-01",
+        "vnetdiagnosticSettingsName": "[concat('mgmt-', resourceGroup().location, '-vnet-diag')]",
+        "vnetLogWorkspaceName": "[concat('mgmt-', resourceGroup().location, '-vnet-log')]",
+        "afwLogWorkspaceName": "[concat('mgmt-', resourceGroup().location, '-afw-log')]",
+        "routeTableName": "[concat('mgmt-', resourceGroup().location,'-rt-1')]",
+        "defaultRouteName": "[concat('mgmt', resourceGroup().location, 'dflt-route')]",
+        "vnetName": "[concat('mgmt-', resourceGroup().location, '-vnet-1')]",
+        "appgateSubnetName": "[concat(variables('vnetName'), '-ztna-snet')]",
+        "mgmtAvdSubnetName": "[concat(variables('vnetName'), '-avd-snet')]",
+        "publicIPNames": "[concat(variables('afwPipNameCopy'), array(concat('mgmt-', resourceGroup().location, '-vnet-1-bas-pip')))]",
+        "azureBastionName": "[concat('mgmt-', resourceGroup().location,'-vnet-1-bas')]",
+        "firewallPolicyName": "[concat('mgmt-', resourceGroup().location, '-afwp-1')]",
+        "ruleCollectionGroupName": "[concat('mgmt-', resourceGroup().location, '-afwp-1-app-rcg')]",                    
+        "azureFirewallName": "[concat('mgmt-', resourceGroup().location,'-afw-1')]"
+    },
+    "resources": [
+        {
+            "copy": {
+                "name": "workspacesCopy",
+                "count": 2
+            },
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "[variables('workspacesApiVersion')]",
+            "name": "[if(equals(copyIndex(), 0), variables('vnetLogWorkspaceName'), variables('afwLogWorkspaceName'))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "features": {
+                    "enableLogAccessUsingOnlyResourcePermissions": true
+                },
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled",
+                "retentionInDays": 30,
+                "sku": {
+                    "name": "pergb2018"
+                },
+                "workspaceCapping": {
+                    "dailyQuotaGb": -1
+                }
+            }            
+        },
+        {
+            "type": "Microsoft.Network/routeTables",
+            "apiVersion": "[variables('routeTablesApiVersion')]",
+            "name": "[variables('routeTableName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "disableBgpRoutePropagation": false,
+                "routes": [
+                    {
+                        "name": "[variables('defaultRouteName')]",
+                        "properties": {
+                            "addressPrefix": "0.0.0.0/0",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[reference(variables('azureFirewallName')).ipConfigurations[0].properties.privateIPAddress]",
+                            "hasBgpOverride": false
+                        },
+                        "type": "Microsoft.Network/routeTables/routes"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "[variables('virtualNetworksApiVersion')]",
+            "name": "[variables('vnetName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vnetIpv4AddressSpace')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "AzureFirewallSubnet",
+                        "properties": {
+                            "addressPrefix": "[cidrSubnet(parameters('vnetIpv4AddressSpace'), 26, 0)]"
+                        }
+                    },
+                    {
+                        "name": "AzureBastionSubnet",
+                        "properties": {
+                            "addressPrefix": "[cidrSubnet(parameters('vnetIpv4AddressSpace'), 26, 1)]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "copy": {
+                "name": "subnetsCopy",
+                "count": 2
+            },
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "[variables('subnetsApiVersion')]",
+            "name": "[concat(variables('vnetName'), '/',if(equals(copyIndex(), 0), variables('appgateSubnetName'), variables('mgmtAvdSubnetName')))]",
+            "properties": {
+                "addressPrefix": "[cidrSubnet(parameters('vnetIpv4AddressSpace'), 26, if(equals(copyIndex(), 0), 2, 3))]",
+                "routeTable": {
+                    "id": "[resourceId('Microsoft.Network/routeTables', variables('routeTableName'))]"
+                }
+            },
+            "dependsOn": [
+                "[variables('vnetName')]",
+                "[variables('routeTableName')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Insights/diagnosticSettings",
+            "apiVersion": "[variables('diagnosticSettingsApiVersion')]",
+            "name": "[variables('vnetdiagnosticSettingsName')]",
+            "scope": "[format('Microsoft.Network/virtualNetworks/{0}', variables('vnetName'))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('vnetLogWorkspaceName'))]",
+                "metrics": [
+                    {
+                        "category": "AllMetrics",
+                        "enabled": true
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[variables('vnetName')]"
+            ]
+        },
+        {
+            "copy": {
+                "name": "publicIpCopy",
+                "count": 3
+            },
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "[variables('pipApiVersion')]",
+            "name": "[variables('publicIPNames')[copyIndex()]]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "sku": {
+                "name": "standard"
+            }
+        },
+        {
+            "type": "Microsoft.Network/bastionHosts",
+            "apiVersion": "[variables('bastionApiVersion')]",
+            "name": "[variables('azureBastionName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "disableCopyPaste": false,
+                "enableFileCopy": true,
+                "enableShareableLink": true,
+                "enableTunneling": true,
+                "ipConfigurations": [
+                {
+                    "name": "ipconfig",
+                    "properties": {
+                        "privateIPAllocationMethod": "Dynamic",
+                        "publicIPAddress": {
+                            "id": "[resourceId('Microsoft.Network/publicIpAddresses', variables('publicIPNames')[2])]"
+                        },
+                        "subnet": {
+                            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'AzureBastionSubnet')]"
+                        }
+                    }
+                }
+                ],
+                "scaleUnits": 2
+            },
+            "sku": {
+                "name": "Standard"
+            },
+            "dependsOn": [
+                "publicIpCopy"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/firewallPolicies",
+            "apiVersion": "[variables('firewallPoliciesApiVersion')]",
+            "name": "[variables('firewallPolicyName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "dnsSettings": {
+                    "servers": [],
+                    "enableProxy": true
+                },
+                "insights": {
+                    "isEnabled": true,
+                    "logAnalyticsResources": {
+                        "defaultWorkspaceId": {
+                            "id": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('afwLogWorkspaceName'))]"
+                        },
+                        "workspaces": []
+                    },
+                    "retentionDays": 30
+                },
+                "intrusionDetection": {
+                    "mode": "Alert",
+                    "configuration": {
+                        "signatureOverrides": [],
+                        "bypassTrafficSettings": []
+					}
+                },
+                "sku": {
+                    "tier": "Premium"
+                },
+                "threatIntelMode": "Alert"                
+            },
+            "resources": [
+                {
+                    "type": "ruleCollectionGroups",
+                    "apiVersion": "[variables('ruleCollectionGroupsApiVersion')]",
+                    "location": "[resourceGroup().location]",
+                    "name": "[variables('ruleCollectionGroupName')]",
+                    "properties": {
+                        "priority": 20000,
+                        "ruleCollections": [
+                            {
+                                "name": "allowed-web-categories",
+                                "priority": 20001,
+                                "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+                                "action": {
+                                    "type": "Allow"
+                                },
+                                "rules": [
+                                    {
+                                        "description": "Allowed web browsing categories",
+                                        "name": "allow-web-browsing",
+                                        "ruleType": "ApplicationRule",
+                                        "protocols": [
+                                            {
+                                                "protocolType": "Http",
+                                                "port": 80
+                                            },
+                                            {
+                                                "protocolType": "Https",
+                                                "port": 443
+                                            }
+                                        ],
+                                        "fqdnTags": [],
+                                        "webCategories": [
+                                            "business",
+                                            "computersandtechnology",
+                                            "education",
+                                            "finance",
+                                            "forumsandnewsgroups",
+                                            "government",
+                                            "healthandmedicine",
+                                            "informationsecurity",
+                                            "jobsearch",
+                                            "news",
+                                            "nonprofitsandngos",
+                                            "personalsites",
+                                            "professionalnetworking",
+                                            "searchenginesandportals",
+                                            "translators",
+                                            "webrepositoryandstorage",
+                                            "webbasedemail",
+                                            "advertisementsandpopups",
+                                            "chat",
+                                            "games",
+                                            "instantmessaging",
+                                            "shopping",
+                                            "socialnetworking",
+                                            "arts",
+                                            "fashionandbeauty",
+                                            "general",
+                                            "leisureandrecreation",
+                                            "natureandconservation",
+                                            "politicsandlaw",
+                                            "realestate",
+                                            "religion",
+                                            "restaurantsanddining",
+                                            "sports",
+                                            "transportation",
+                                            "travel"
+                                        ],
+                                        "terminateTLS": false,
+                                        "sourceAddresses": [
+                                            "*"
+                                        ]
+                                    }
+                                ]                        
+                            },
+                            {
+                                "name": "blocked-web-categories",
+                                "priority": 20010,
+                                "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+                                "action": {
+                                    "type": "Deny"
+                                },
+                                "rules": [
+                                    {
+                                        "description": "Blocked web browsing categories",
+                                        "name": "block-web-browsing",
+                                        "ruleType": "ApplicationRule",
+                                        "protocols": [
+                                            {
+                                                "protocolType": "Http",
+                                                "port": 80
+                                            },
+                                            {
+                                                "protocolType": "Https",
+                                                "port": 443
+                                            }
+                                        ],
+                                        "fqdnTags": [],
+                                        "webCategories": [
+                                            "childabuseimages",
+                                            "criminalactivity",
+                                            "datingandpersonals",
+                                            "gambling",
+                                            "hacking",
+                                            "hateandintolerance",
+                                            "illegaldrug",
+                                            "illegalsoftware",
+                                            "lingerieandswimsuits",
+                                            "marijuana",
+                                            "nudity",
+                                            "pornographyandsexuallyexplicit",
+                                            "selfharm",
+                                            "sexeducation",
+                                            "tasteless",
+                                            "violence",
+                                            "weapons",
+                                            "imagesharing",
+                                            "peertopeer",
+                                            "streamingmediaanddownloads",
+                                            "downloadsites",
+                                            "entertainment",
+                                            "cults"
+                                        ],
+                                        "terminateTLS": false,
+                                        "sourceAddresses": [
+                                            "*"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "dependsOn": [
+                        "[variables('firewallPolicyName')]"
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Network/azureFirewalls",
+            "apiVersion": "[variables('azureFirewallsApiVersion')]",
+            "name": "[variables('azureFirewallName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "copy": [
+                    {
+                        "name": "ipConfigurations",
+                        "count": 2,
+                        "input": {
+                            "name": "[if(equals(copyIndex('ipConfigurations'), 0), 'ipConfig', 'ipConfig1')]",
+                            "properties": {
+                                "subnet": "[if(equals(copyIndex('ipConfigurations'), 0), json('{\"id\": \"[resourceId(''Microsoft.Network/virtualNetworks/subnets'', variables(''vnetName''), ''AzureFirewallSubnet'')]\"}'), json('null'))]",
+                                "publicIPAddress": {
+                                    "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('afwPipNameCopy')[copyIndex('ipConfigurations')])]"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "firewallPolicy": {
+                    "id": "[resourceId('Microsoft.Network/firewallPolicies', variables('firewallPolicyName'))]"
+                },
+                "sku": {
+                    "name": "AZFW_VNet",
+                    "tier": "Premium"
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/firewallPolicies', variables('firewallPolicyName'))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "resourceGroupName" : {
+            "type": "string",
+            "value": "[resourceGroup().name]"
+        },
+        "routeTableName": {
+            "type": "string",
+            "value": "[variables('routeTableName')]"
+        },
+        "vnetAddressSpace": {
+            "type": "string",
+            "value": "[parameters('vnetIpv4AddressSpace')]"
+        },
+        "vnetName": {
+            "type": "string",
+            "value": "[variables('vnetName')]"
+        },
+        "subnetName" : {
+            "type": "array",
+            "value": "[concat( array('AzureFirewallSubnet'), array('AzureBastionSubnet'), array(variables('appgateSubnetName')), array(variables('mgmtAvdSubnetName')))]"
+        }
+    }
+}

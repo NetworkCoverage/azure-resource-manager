@@ -1,0 +1,224 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "customerShortName": {
+            "type": "string",
+            "metadata": {
+                "description": "The abbreviated name of the customer"
+            }
+        },
+        "vnetAddressSpace": {
+            "type": "string",
+            "defaultValue": "172.17.0.0/16",
+            "metadata": {
+                "description": "The network address for the virtual network."
+            }
+        },
+        "managementResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the management resource group"
+            }
+        },
+        "managementRouteTableName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the management route table"
+            }
+        },
+        "managementVnetAddressSpace": {
+            "type": "string",
+            "metadata": {
+                "description": "Address space of the management network for peering"
+            }
+        },
+        "managementVnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the management virtual network"
+            }
+        }
+    },
+    "variables": {
+        "copy": [
+            {
+                "name": "subnetNameCopy",
+                "count":2,
+                "input": "[concat(parameters('customerShortName'), '-', resourceGroup().location, '-vnet-1-snet-', copyIndex('subnetNameCopy', 1))]"
+                            
+            }
+        ],
+        "workspacesApiVersion": "2023-09-01",
+        "virtualNetworksApiVersion": "2024-05-01",
+        "virtualNetworkPeeringsApiVersion": "2024-05-01",
+        "diagnosticSettingsApiVersion": "2021-05-01-preview",
+        "deploymentsApiVersion": "2024-11-01",
+        "vnetWorkspaceName": "[concat(parameters('customerShortName'), '-', resourceGroup().location, '-vnet-log')]",
+        "vnetName": "[concat(parameters('customerShortName'), '-', resourceGroup().location, '-vnet-1')]",
+        "vnetdiagnosticSettingsName": "[concat(parameters('customerShortName'), '-vnet-', resourceGroup().location, '-diag')]",
+        "localVnetPeeringName": "[concat(variables('vnetName'), '-peer')]",
+        "remoteVnetPeeringName": "[concat(parameters('managementVnetName'), '-peer')]",
+        "deploymentName": "[concat('vnet-peering-', uniqueString(resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "[variables('workspacesApiVersion')]",
+            "name": "[variables('vnetWorkspaceName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "features": {
+                    "enableLogAccessUsingOnlyResourcePermissions": true
+                },
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled",
+                "retentionInDays": 30,
+                "sku": {
+                    "name": "pergb2018"
+                },
+                "workspaceCapping": {
+                    "dailyQuotaGb": -1
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "[variables('virtualNetworksApiVersion')]",
+            "name": "[variables('vnetName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vnetAddressSpace')]"
+                    ]
+                },
+                "copy": [
+                    {
+                        "name": "subnets",
+                        "count": 2,
+                        "input": {
+                            "name": "[variables('subnetNameCopy')[copyIndex('subnets')]]",
+                            "properties": {
+                                "addressPrefix": "[cidrSubnet(parameters('vnetAddressSpace'), 24, copyIndex('subnets'))]",
+                                "routeTable": {
+                                    "id": "[resourceId(parameters('managementResourceGroupName'),'Microsoft.Network/routeTables', parameters('managementRouteTableName'))]"
+                                },
+                                "privateEndpointNetworkPolicies": "Disabled",
+                                "privateLinkServiceNetworkPolicies": "Enabled"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Insights/diagnosticSettings",
+            "apiVersion": "[variables('diagnosticSettingsApiVersion')]",
+            "name": "[variables('vnetdiagnosticSettingsName')]",
+            "scope": "[format('Microsoft.Network/virtualNetworks/{0}', variables('vnetName'))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('vnetWorkspaceName'))]",
+                "metrics": [
+                    {
+                        "category": "AllMetrics",
+                        "enabled": true
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[variables('vnetName')]"
+            ]
+        },
+        // virtual network peering - must be referenced in the virtual netowrk resource.
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "[variables('virtualNetworkPeeringsApiVersion')]",
+            "name": "[concat(variables('vnetName'), '/', variables('localVnetPeeringName'))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "remoteAddressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('managementVnetAddressSpace')]"
+                    ]
+                },
+                "remoteVirtualNetwork": {
+                    "id": "[ resourceId(parameters('managementResourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('managementVnetName'))]"
+                },
+                "remoteVirtualNetworkAddressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('managementVnetAddressSpace')]"
+                    ]
+                },
+                "useRemoteGateways": false
+            },
+            "dependsOn": [
+                "[variables('vnetName')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "[variables('deploymentsApiVersion')]",
+            "name": "[variables('DeploymentName')]",
+            "resourceGroup": "[parameters('managementResourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+                            "apiVersion": "[variables('virtualNetworkPeeringsApiVersion')]",
+                            "name": "[concat(parameters('managementVnetName'), '/', variables('remoteVnetPeeringName'))]",
+                            "location": "[resourceGroup().location]",
+                            "properties": {
+                                "allowVirtualNetworkAccess": true,
+                                "allowForwardedTraffic": true,
+                                "allowGatewayTransit": false,
+                                "remoteAddressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('vnetAddressSpace')]"
+                                    ]
+                                },
+                                "remoteVirtualNetwork": {
+                                    "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+                                },
+                                "remoteVirtualNetworkAddressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('vnetAddressSpace')]"
+                                    ]
+                                },
+                                "useRemoteGateways": false
+                            }
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[variables('vnetName')]"
+            ]
+        }
+    ],
+    "outputs": {
+        "customerResourceGroupName" : {
+            "type": "string",
+            "value": "[resourceGroup().name]"
+        },
+        "customerVnetName": {
+            "type": "string",
+            "value": "[variables('vnetName')]"
+        },
+        "customerSubnetNames" : {
+            "type": "array",
+            "copy": {
+                "count": 2,
+                "input": "[variables('subnetNameCopy')[copyIndex()]]"
+            }
+        }
+    }
+}
