@@ -13,7 +13,7 @@
 			"metadata": {
 				"description": "The URI location of the source script used for executing run commands on the virtual machine."
 			},
-			"defaultValue": "https://raw.githubusercontent.com/NetworkCoverage/Azure-PS-Resource-Manager/refs/heads/main/cmmc-avd-deployment/scripts/fslogixcloudidentity.ps1"
+			"defaultValue": "https://raw.githubusercontent.com/NetworkCoverage/Azure-PS-Resource-Manager/refs/heads/main/cmmc-avd-deployment/virtual-machine/runcommand/fslogixcloudidentity.ps1"
 		},
 		"fslogixStorageAccount": {
 			"type": "string",
