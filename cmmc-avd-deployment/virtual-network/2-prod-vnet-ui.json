@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/uiDefinition.json#",
+  "handler": "Microsoft.Common.TextBox",
+  "version": "1.0.0.0",
+  "parameters": {
+    "basics": [
+      {
+        "name": "customerShortName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Customer Short Name",
+        "toolTip": "Abbreviated name of the customer (e.g., 'contoso')",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-zA-Z0-9\\-]{1,16}$",
+          "validationMessage": "Only alphanumeric characters and hyphens allowed, max 16 chars"
+        }
+      },
+      {
+        "name": "vnetAddressSpace",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Production VNet CIDR (e.g., 172.17.0.0/16)",
+        "defaultValue": "172.17.0.0/16",
+        "constraints": {
+          "required": true,
+          "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[1-2][0-9]|3[0-2])$",
+          "validationMessage": "Must be a valid CIDR format, e.g., 172.17.0.0/16"
+        }
+      },
+      {
+        "name": "managementResourceGroupName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Management Resource Group Name",
+        "constraints": {
+          "required": true
+        }
+      },
+      {
+        "name": "managementRouteTableName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Management Route Table Name",
+        "constraints": {
+          "required": true
+        }
+      },
+      {
+        "name": "managementVnetName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Management VNet Name",
+        "constraints": {
+          "required": true
+        }
+      },
+      {
+        "name": "managementVnetAddressSpace",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Management VNet CIDR",
+        "constraints": {
+          "required": true,
+          "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[1-2][0-9]|3[0-2])$",
+          "validationMessage": "Must be a valid CIDR format"
+        }
+      }
+    ],
+    "outputs": {
+      "customerShortName": "[basics('customerShortName')]",
+      "vnetAddressSpace": "[basics('vnetAddressSpace')]",
+      "managementResourceGroupName": "[basics('managementResourceGroupName')]",
+      "managementRouteTableName": "[basics('managementRouteTableName')]",
+      "managementVnetName": "[basics('managementVnetName')]",
+      "managementVnetAddressSpace": "[basics('managementVnetAddressSpace')]"
+    }
+  }
+}

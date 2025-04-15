@@ -118,7 +118,8 @@
         {
             "copy": {
                 "name": "subnetsCopy",
-                "count": 2
+                "count": 2,
+                "mode": "Serial"
             },
             "type": "Microsoft.Network/virtualNetworks/subnets",
             "apiVersion": "[variables('subnetsApiVersion')]",
@@ -127,7 +128,12 @@
                 "addressPrefix": "[cidrSubnet(parameters('vnetIpv4AddressSpace'), 26, if(equals(copyIndex(), 0), 2, 3))]",
                 "routeTable": {
                     "id": "[resourceId('Microsoft.Network/routeTables', variables('routeTableName'))]"
-                }
+                },
+                "serviceEndpoints": [
+                    {
+                        "service": "Microsoft.Storage"
+                    }
+                ]
             },
             "dependsOn": [
                 "[variables('vnetName')]",
