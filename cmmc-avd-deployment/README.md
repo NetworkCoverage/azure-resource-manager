@@ -20,9 +20,10 @@ This step provisions the core management environment:
 - **Diagnostic Settings** for monitoring
 - **Log Analytics Workspaces** (for both firewall and VNet logs)
 
-[![Deploy to Azure Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetworkCoverage%2Fazure-resource-manager%2Fmain%2Fcmmc-avd-deployment%2Fvirtual-network%2F1-mgmt-vnet-ui.json)
+[![Deploy to Azure Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetworkCoverage%2Fazure-resource-manager%2Fmain%2Fcmmc-avd-deployment%2Fvirtual-network%2F1-mgmt-vnet.json)
 
-> 📁 [`1-mgmt-vnet`](./cmmc-avd-deployment/virtual-network/1-mgmt-vnet.json)
+> 📁 [`1-mgmt-vnet.json`](https://github.com/NetworkCoverage/azure-resource-manager/blob/main/cmmc-avd-deployment/cmmc-avd-deployment/virtual-network/1-mgmt-vnet.json)  
+> 📄 [`1-mgmt-vnet-ui.json`](https://github.com/NetworkCoverage/azure-resource-manager/blob/main/cmmc-avd-deployment/virtual-network/1-mgmt-vnet-ui.json)
 
 ---
 
@@ -36,9 +37,10 @@ This step provisions a dedicated production network environment:
 - **Diagnostic Settings** and a dedicated **Log Analytics Workspace**
 - **VNet Peering** to the management network for secure cross-network communication
 
-[![Deploy to Azure Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetworkCoverage%2Fazure-resource-manager%2Fmain%2Fcmmc-avd-deployment%2Fvirtual-network%2F2-prod-vnet-ui.json)
+[![Deploy to Azure Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetworkCoverage%2Fazure-resource-manager%2Fmain%2Fcmmc-avd-deployment%2Fvirtual-network%2F2-prod-vnet.json)
 
-> 📁 [`2-prod-vnet`](./cmmc-avd-deployment/virtual-network/2-prod-vnet.json)
+> 📁 [`2-prod-vnet.json`](https://github.com/NetworkCoverage/azure-resource-manager/blob/main/cmmc-avd-deployment/virtual-network/2-prod-vnet.json)  
+> 📄 [`2-prod-vnet-ui.json`](https://github.com/NetworkCoverage/azure-resource-manager/blob/main/cmmc-avd-deployment/virtual-network/2-prod-vnet-ui.json)
 
 ---
 
