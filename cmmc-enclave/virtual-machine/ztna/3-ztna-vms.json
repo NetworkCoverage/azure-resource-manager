@@ -5,69 +5,46 @@
         "customerShortName": {
             "type": "String",
             "metadata": {
-                "description": "The abbreviated name of the customer"
-            }
-        },
-        "locationShortName": {
-            "allowedValues": [
-                "uga",
-                "ugt",
-                "ugv"
-            ],
-            "type": "String",
-            "metadata": {
-                "description": "Azure region where the virtual network will be created."
+                "description": "Short name or abbreviation identifying the customer."
             }
         },
         "sdpVersion": {
             "defaultValue": "v6_3a_vm",
             "type": "String",
             "metadata": {
-                "description": "Version of the AppGate SDP VM to deploy."
-            }
-        },
-        "vnetName": {
-            "type": "String",
-            "metadata": {
-                "description": "Name of the exisintg virtual network for the AppGate SDP VM."
-            }
-        },
-        "subnetName": {
-            "type": "String",
-            "metadata": {
-                "description": "The name of the specific subnet within the selected virtual network that will house the Appgate appliances"
+                "description": "Specifies the version of the AppGate SDP virtual machine to be deployed."
             }
         },
         "fwPublicIpNames": {
             "type": "String",
             "metadata": {
-                "description": "Comma separated list of the public IP addresses assigned to the Azure firewall."
+                "description": "Comma-separated list of public IP resource names associated with the Azure Firewall."
             }
         },
         "fwPolicyName": {
             "type": "String",
             "metadata": {
-                "description": "Name of the Azure firewall policy"
+                "description": "Name of the Azure Firewall Policy to associate with rule collections."
             }
         },
         "dnatRuleCollectionGroupName": {
-            "defaultValue": "shared-ugv-afwprg-dnat",
             "type": "String",
             "metadata": {
-                "description": "Name of the rule collection group"
-            }
+                "description": "Name of the DNAT rule collection group within the firewall policy."
+            },
+            "defaultValue": "[concat('mgmt-', resourceGroup().location, '-afwp-dnat-rcg')]"
         },
         "networkRuleCollectionGroupName": {
-            "defaultValue": "shared-ugv-afwprg-net",
             "type": "String",
             "metadata": {
-                "description": "Name of the rule collection group"
-            }
+                "description": "Name of the network rule collection group within the firewall policy."
+            },
+            "defaultValue": "[concat('mgmt-', resourceGroup().location, '-afwp-network-rcg')]"
         },
         "sourceAddress": {
             "type": "String",
             "metadata": {
-                "description": "Source IP address for SSH access to the AppGate SDP VM."
+                "description": "Source IP address(es) allowed to initiate SSH access to the AppGate SDP virtual machines. Comma separate multiple IPs."
             }
         }
     },
@@ -78,60 +55,34 @@
                 "count": "[length(split(parameters('fwPublicIpNames'), ','))]",
                 "input": "[trim(split(parameters('fwPublicIpNames'), ',')[copyIndex('fwPublicIpNames')])]"
             },
-            {
-                "name": "subnetName",
-                "count": "[length(split(parameters('subnetName'), ','))]",
-                "input": "[trim(split(parameters('subnetName'), ',')[copyIndex('subnetName')])]"
+             {
+                "name": "sourceAddress",
+                "count": "[length(split(parameters('sourceAddress'), ','))]",
+                "input": "[trim(split(parameters('sourceAddress'), ',')[copyIndex('sourceAddress')])]"
             }
+
         ],
-        "ctlSshKeygenScript":  "[concat('shared-', parameters('locationShortName'), '-ctl-ssh-keygen-script')]",
-        "gwSshKeygenScript":  "[concat('shared-', parameters('locationShortName'), '-gw-ssh-keygen-script')]",
-        "ctlSshKeyName": "[concat('shared-', parameters('locationShortName'), '-ag-ctl-sshkey')]",
-        "gwSshKeyName": "[concat('shared-', parameters('locationShortName'), '-ag-gw-sshkey')]",
-        "keyVaultName": "[concat(parameters('customerShortName'), '-shared-', parameters('locationShortName'), '-kv-1')]",
+        "deploymentScriptApiVersion": "2023-08-01",
+        "sshPublicKeysApiVersion": "2024-11-01",
+        "keyVaultApiVersion": "2024-12-01-preview",
+        "vaultSecretApiVersion": "2024-12-01-preview",
+        "networkInterfacesApiVersion": "2024-05-01",
+        "pipApiVersion": "2024-05-01",
+        "virtualMachinesApiVersion": "2024-11-01",
+        "ruleCollectionGroupsApiVersion": "2024-03-01",
+        "ctlSshKeygenScript":  "[concat('mgmt-', resourceGroup().location, '-ctl-ssh-keygen-script')]",
+        "gwSshKeygenScript":  "[concat('mgmt-', resourceGroup().location, '-gw-ssh-keygen-script')]",
+        "ctlSshKeyName": "[concat('mgmt-', resourceGroup().location, '-ag-ctl-sshkey')]",
+        "gwSshKeyName": "[concat('mgmt-', resourceGroup().location, '-ag-gw-sshkey')]",
+        "keyVaultName": "[concat(parameters('customerShortName'), '-', resourceGroup().location, '-kv-1')]",
         "ctlSecretName": "[concat(variables('keyVaultName'), '-ctl-secret')]",
         "gwSecretName": "[concat(variables('keyVaultName'), '-gw-secret')]",
-        "ctlVmName": "[concat('shared-', parameters('locationShortName'), '-ag-ctl-1')]",
-        "gwVmName": "[concat('shared-', parameters('locationShortName'), '-ag-gw-1')]",
-        "ctlSubnetName": "[variables('subnetName')[0]]",
-        "gwSubnetName": "[if(equals(length(variables('subnetName')), 2), variables('subnetName')[1], variables('subnetName')[0])]",
-        "networkSecurityGroupName": "[concat(variables('gwVmName'), '-ipv6-nsg')]",
-        "ctlNicProperties": {
-            "ipConfigurations": [
-                {
-                    "name": "ipconfig",
-                    "properties": {
-                        "privateIPAllocationMethod": "Dynamic",
-                        "subnet": {
-                            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('ctlSubnetName'))]"
-                        }
-                    }
-                }
-            ]
-        },
-        "gwNicProperties": {
-            "copy": [
-                {
-                    "name": "ipConfigurations",
-                    "count": 2,
-                    "input": {
-                        "name": "[if(equals(copyIndex('ipConfigurations'), 0), 'ipconfig-v4', 'ipconfig-v6')]",
-                        "properties": {
-                            "privateIPAddressVersion": "[if(equals(copyIndex('ipConfigurations'), 0), 'IPv4', 'IPv6')]",
-                            "privateIPAllocationMethod": "Dynamic",
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('gwSubnetName'))]"
-                            }
-                        }
-                    }
-                }
-            ],
-            "networkSecurityGroup": {
-                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
-            }
-        },
-        "ctlDomainNameLabel": "[concat(parameters('customerShortName'), '-', parameters('locationShortName'),'-sdpctl-', uniqueString(resourceGroup().id))]",
-        "gwDomainNameLabel": "[concat(parameters('customerShortName'), '-', parameters('locationShortName'),'-sdpgw-', uniqueString(resourceGroup().id))]",
+        "ctlVmName": "[concat('mgmt-', resourceGroup().location, '-ag-ctl-1')]",
+        "gwVmName": "[concat('mgmt-', resourceGroup().location, '-ag-gw-1')]",
+        "vnetName": "[concat('mgmt-', resourceGroup().location, '-vnet-1')]",
+        "ztnaSubnetName": "[concat(variables('vnetName'), '-ztna-snet')]",
+        "ctlDomainNameLabel": "[concat(parameters('customerShortName'), '-sdpctl-', uniqueString(resourceGroup().id))]",
+        "gwDomainNameLabel": "[concat(parameters('customerShortName'), '-sdpgw-', uniqueString(resourceGroup().id))]",
         "dnatRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('dnatRuleCollectionGroupName'))]",
         "networkRuleCollectionGroupName": "[concat(parameters('fwPolicyName'), '/', parameters('networkRuleCollectionGroupName'))]"
     },
@@ -142,7 +93,7 @@
                 "count": 2
             },
             "type": "Microsoft.Resources/deploymentScripts",
-            "apiVersion": "2020-10-01",
+            "apiVersion": "[variables('deploymentScriptApiVersion')]",
             "name": "[if(equals(copyIndex(),0), variables('ctlSshKeygenScript'), variables('gwSshKeygenScript'))]",
             "location": "[resourceGroup().location]",
             "kind": "AzureCLI",
@@ -160,7 +111,7 @@
                 "count": 2
             },
             "type": "Microsoft.Compute/sshPublicKeys",
-            "apiVersion": "2024-07-01",
+            "apiVersion": "[variables('sshPublicKeysApiVersion')]",
             "name": "[if(equals(copyIndex(), 0), variables('ctlSshKeyName'), variables('gwSshKeyName'))]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
@@ -172,7 +123,7 @@
         },
         {
             "type": "Microsoft.KeyVault/vaults",
-            "apiVersion": "2024-11-01",
+            "apiVersion": "[variables('keyVaultApiVersion')]",
             "name": "[variables('keyVaultName')]",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -204,7 +155,7 @@
             },
             "name": "[concat(variables('keyVaultName'), '/', if(equals(copyIndex(),0), variables('ctlSecretName'), variables('gwSecretName')))]",
             "type": "Microsoft.KeyVault/vaults/secrets",
-            "apiVersion": "2024-12-01-preview",
+            "apiVersion": "[variables('vaultSecretApiVersion')]",
             "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
                 "sshCopy"
@@ -214,23 +165,23 @@
             }
         },
         {
-            "name": "[variables('networkSecurityGroupName')]",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2020-05-01",
+            "copy": {
+                "name": "nicCopy",
+                "count": 2
+            },
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "[variables('networkInterfacesApiVersion')]",
+            "name": "[if(equals(copyIndex(),0), concat(variables('ctlVmName'), '-nic'), concat(variables('gwVmName'), '-nic'))]",
             "location": "[resourceGroup().location]",
             "properties": {
-                "securityRules": [
+                "ipConfigurations": [
                     {
-                        "name": "deny-outbound-ipv6",
+                        "name": "ipconfig",
                         "properties": {
-                            "priority": 100,
-                            "protocol": "*",
-                            "access": "Deny",
-                            "direction": "Outbound",
-                            "sourceAddressPrefix":  "[reference(resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('gwSubnetName')), '2024-05-01', 'Full').properties.addressPrefixes[1]]",
-                            "sourcePortRange": "*",
-                            "destinationAddressPrefix": "::/0",
-                            "destinationPortRange": "*"
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('ztnaSubnetName'))]"
+                            }
                         }
                     }
                 ]
@@ -238,25 +189,11 @@
         },
         {
             "copy": {
-                "name": "nicCopy",
-                "count": 2
-            },
-            "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2022-11-01",
-            "name": "[if(equals(copyIndex(),0), concat(variables('ctlVmName'), '-nic'), concat(variables('gwVmName'), '-nic'))]",
-            "location": "[resourceGroup().location]",
-            "properties": "[if(equals(copyIndex(),0), variables('ctlNicProperties'), variables('gwNicProperties'))]",
-            "dependsOn": [
-                "[variables('networkSecurityGroupName')]"
-            ]
-        },
-        {
-            "copy": {
                 "name": "pipCopy",
                 "count": 2
             },
             "type": "Microsoft.Network/publicIPAddresses",
-            "apiVersion": "2024-03-01",
+            "apiVersion": "[variables('pipApiVersion')]",
             "name": "[variables('fwPublicIpNames')[copyIndex()]]",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -278,7 +215,7 @@
                 "count": 2
             },
             "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2022-11-01",
+            "apiVersion": "[variables('virtualMachinesApiVersion')]",
             "name": "[if(equals(copyIndex(),0), variables('ctlVmName'), variables('gwVmName'))]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
@@ -357,7 +294,7 @@
         },
         {
             "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
-            "apiVersion": "2024-03-01",
+            "apiVersion": "[variables('ruleCollectionGroupsApiVersion')]",
             "name": "[variables('dnatRuleCollectionGroupName')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
@@ -382,10 +319,7 @@
                                 "ipProtocols": [
                                     "TCP"
                                 ],
-                                "sourceAddresses": [
-                                    "[parameters('sourceAddress')]"
-                                ],
-                                "sourceIpGroups": [],
+                                "sourceAddresses": "[variables('sourceAddress')]",
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[0]).ipAddress]"
                                 ],
@@ -405,7 +339,6 @@
                                 "sourceAddresses": [
                                     "*"
                                 ],
-                                "sourceIpGroups": [],
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[0]).ipAddress]"
                                 ],
@@ -424,7 +357,6 @@
                                 "sourceAddresses": [
                                     "*"
                                 ],
-                                "sourceIpGroups": [],
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[0]).ipAddress]"
                                 ],
@@ -440,10 +372,7 @@
                                 "ipProtocols": [
                                     "TCP"
                                 ],
-                                "sourceAddresses": [
-                                    "[parameters('sourceAddress')]"
-                                ],
-                                "sourceIpGroups": [],
+                                "sourceAddresses": "[variables('sourceAddress')]",
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[0]).ipAddress]"
                                 ],
@@ -463,7 +392,6 @@
                                 "sourceAddresses": [
                                     "*"
                                 ],
-                                "sourceIpGroups": [],
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[1]).ipAddress]"
                                 ],
@@ -482,7 +410,6 @@
                                 "sourceAddresses": [
                                     "*"
                                 ],
-                                "sourceIpGroups": [],
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[1]).ipAddress]"
                                 ],
@@ -498,10 +425,7 @@
                                 "ipProtocols": [
                                     "TCP"
                                 ],
-                                "sourceAddresses": [
-                                    "[parameters('sourceAddress')]"
-                                ],
-                                "sourceIpGroups": [],
+                                "sourceAddresses": "[variables('sourceAddress')]",
                                 "destinationAddresses": [
                                     "[reference(variables('fwPublicIpNames')[1]).ipAddress]"
                                 ],
@@ -516,7 +440,7 @@
         },
         {
             "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
-            "apiVersion": "2024-03-01",
+            "apiVersion": "[variables('ruleCollectionGroupsApiVersion')]",
             "name": "[variables('networkRuleCollectionGroupName')]",
             "location": "usgovvirginia",
             "dependsOn": [
@@ -584,5 +508,39 @@
                 ]
             }
         }
-    ]
+    ],
+    "outputs": {
+        "ctlVmName": {
+            "type": "String",
+            "value": "[variables('ctlVmName')]"
+        },
+        "ctlDomainNameLabel": {
+            "type": "String",
+            "value": "[variables('ctlDomainNameLabel')]"
+        },
+        "ctlPrivateIp": {
+            "type": "String",
+            "value": "[reference(resourceId('Microsoft.Network/networkInterfaces', concat(variables('ctlVmName'), '-nic'))).ipConfigurations[0].properties.privateIPAddress]"
+        },
+        "gwVmName": {
+            "type": "String",
+            "value": "[variables('gwVmName')]"
+        },
+        "gwDomainNameLabel": {
+            "type": "String",
+            "value": "[variables('gwDomainNameLabel')]"
+        },
+        "keyVaultName": {
+            "type": "String",
+            "value": "[variables('keyVaultName')]"
+        },
+        "ctlSecretName": {
+            "type": "String",
+            "value": "[variables('ctlSecretName')]"
+        },
+        "gwSecretName": {
+            "type": "String",
+            "value": "[variables('gwSecretName')]"
+        }
+    }
 }

@@ -34,12 +34,12 @@
         "routeTableName": "[concat('mgmt-', resourceGroup().location,'-rt-1')]",
         "defaultRouteName": "[concat('mgmt', resourceGroup().location, 'dflt-route')]",
         "vnetName": "[concat('mgmt-', resourceGroup().location, '-vnet-1')]",
-        "appgateSubnetName": "[concat(variables('vnetName'), '-ztna-snet')]",
+        "ztnaSubnetName": "[concat(variables('vnetName'), '-ztna-snet')]",
         "mgmtAvdSubnetName": "[concat(variables('vnetName'), '-avd-snet')]",
         "publicIPNames": "[concat(variables('afwPipNameCopy'), array(concat('mgmt-', resourceGroup().location, '-vnet-1-bas-pip')))]",
         "azureBastionName": "[concat('mgmt-', resourceGroup().location,'-vnet-1-bas')]",
         "firewallPolicyName": "[concat('mgmt-', resourceGroup().location, '-afwp-1')]",
-        "ruleCollectionGroupName": "[concat('mgmt-', resourceGroup().location, '-afwp-1-app-rcg')]",                    
+        "ruleCollectionGroupName": "[concat('mgmt-', resourceGroup().location, '-afwp-1-application-rcg')]",                    
         "azureFirewallName": "[concat('mgmt-', resourceGroup().location,'-afw-1')]"
     },
     "resources": [
@@ -123,7 +123,7 @@
             },
             "type": "Microsoft.Network/virtualNetworks/subnets",
             "apiVersion": "[variables('subnetsApiVersion')]",
-            "name": "[concat(variables('vnetName'), '/',if(equals(copyIndex(), 0), variables('appgateSubnetName'), variables('mgmtAvdSubnetName')))]",
+            "name": "[concat(variables('vnetName'), '/',if(equals(copyIndex(), 0), variables('ztnaSubnetName'), variables('mgmtAvdSubnetName')))]",
             "properties": {
                 "addressPrefix": "[cidrSubnet(parameters('vnetIpv4AddressSpace'), 26, if(equals(copyIndex(), 0), 2, 3))]",
                 "routeTable": {
@@ -432,7 +432,15 @@
         },
         "subnetName" : {
             "type": "array",
-            "value": "[concat( array('AzureFirewallSubnet'), array('AzureBastionSubnet'), array(variables('appgateSubnetName')), array(variables('mgmtAvdSubnetName')))]"
+            "value": "[concat( array('AzureFirewallSubnet'), array('AzureBastionSubnet'), array(variables('ztnaSubnetName')), array(variables('mgmtAvdSubnetName')))]"
+        },
+        "afwPublicIPName": {
+            "type": "array",
+            "value": "[variables('afwPipNameCopy')]"
+        },
+        "afwpolicyName": {
+            "type": "string",
+            "value": "[variables('firewallPolicyName')]"
         }
     }
 }
