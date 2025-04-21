@@ -151,6 +151,38 @@ else {
     New-MgOauth2PermissionGrant @PermissionGrantParams
 }
 
+# Create dynamic group for Appgate users
+Write-Host "Creating dynamic group 'Appgate OIDC Users'..."
+
+$DynamicRule = "((user.companyName -eq `"$CompanyName`") or (user.companyName -eq `"Network Coverage`")) and (user.accountEnabled -eq true)"
+
+$GroupParams = @{
+    DisplayName     = 'Appgate OIDC Users'
+    Description     = 'Users allowed to authenticate to Appgate via OIDC'
+    MailEnabled     = $false
+    MailNickname    = ('appgate_oidc_users_' + ([guid]::NewGuid().ToString().Substring(0, 8)))
+    SecurityEnabled = $true
+    GroupTypes      = @('DynamicMembership')
+    MembershipRule  = $DynamicRule
+    MembershipRuleProcessingState = 'On'
+}
+
+$OidcGroup = New-MgGroup @GroupParams
+Write-Host "Group created with Object ID: $($OidcGroup.Id)"
+
+Write-Host "Assigning group to the application (service principal)..."
+
+# Assign the group to the service principal
+$AssignmentParams = @{
+    PrincipalId = $OidcGroup.Id             # the group
+    ResourceId  = $Sp.Id                    # the app's service principal
+    AppRoleId   = '00000000-0000-0000-0000-000000000000'  # default role assignment
+}
+
+New-MgServicePrincipalAppRoleAssignment @AssignmentParams
+
+Write-Host "✅ Group successfully assigned to application."
+
 # Output useful data
 Write-Host ('App registration complete')
 Write-Host ('Display Name           : {0}' -f $App.DisplayName)
