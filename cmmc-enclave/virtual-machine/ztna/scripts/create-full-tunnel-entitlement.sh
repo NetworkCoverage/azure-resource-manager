@@ -99,7 +99,9 @@ entitlement_payload=$(cat <<EOF
     }
   ],
   "conditionLogic": "and",
-  "conditions": [],
+  "conditions": [
+    "ee7b7e6f-e904-4b4f-a5ec-b3bef040643e"
+  ],
   "disabled": false
 }
 EOF

@@ -73,6 +73,10 @@ $SpParams = @{
     AppId = $App.AppId
     DisplayName = 'Appgate OIDC Identity Provider'
     NotificationEmailAddresses = 'support@netcov.com'
+    Tags = @(
+        "WindowsAzureActiveDirectoryIntegratedApp",
+        "HideApp"
+    )
 }
 $Sp = New-MgServicePrincipal @SpParams
 
@@ -175,13 +179,13 @@ Write-Host "Assigning group to the application (service principal)..."
 # Assign the group to the service principal
 $AssignmentParams = @{
     PrincipalId = $OidcGroup.Id             # the group
-    ResourceId  = $Sp.Id                    # the app's service principal
+    ServicePrincipalId  = $Sp.Id                    # the app's service principal
     AppRoleId   = '00000000-0000-0000-0000-000000000000'  # default role assignment
 }
 
 New-MgServicePrincipalAppRoleAssignment @AssignmentParams
 
-Write-Host "✅ Group successfully assigned to application."
+Write-Host "Group successfully assigned to application."
 
 # Output useful data
 Write-Host ('App registration complete')

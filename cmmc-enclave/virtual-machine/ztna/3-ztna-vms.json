@@ -514,9 +514,9 @@
             "type": "String",
             "value": "[variables('ctlVmName')]"
         },
-        "ctlDomainNameLabel": {
+        "ctlPublicIpFqdn": {
             "type": "String",
-            "value": "[variables('ctlDomainNameLabel')]"
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('fwPublicIpNames')[0]), variables('pipApiVersion')).dnsSettings.fqdn]"
         },
         "ctlPrivateIp": {
             "type": "String",
@@ -526,9 +526,9 @@
             "type": "String",
             "value": "[variables('gwVmName')]"
         },
-        "gwDomainNameLabel": {
+        "gwPublicIpFqdn": {
             "type": "String",
-            "value": "[variables('gwDomainNameLabel')]"
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('fwPublicIpNames')[1]), variables('pipApiVersion')).dnsSettings.fqdn]"
         },
         "keyVaultName": {
             "type": "String",
