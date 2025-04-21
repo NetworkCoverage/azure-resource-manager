@@ -36,7 +36,7 @@ $TenantId = (Get-AzContext).Tenant.Id
 Write-Host 'Creating OIDC App...'
 # Create the OIDC App
 $AppParams = @{
-    DisplayName = 'Appgate OIDC Identity Provider 1'
+    DisplayName = 'Appgate OIDC Identity Provider'
     GroupMembershipClaims = 'SecurityGroup'
     PublicClient = @{
         RedirectUris = @('http://localhost:29001/oidc')
@@ -71,7 +71,7 @@ Write-Host 'Creating service principal...'
 $SpParams = @{
     AccountEnabled = $true
     AppId = $App.AppId
-    DisplayName = 'Appgate OIDC Identity Provider 1'
+    DisplayName = 'Appgate OIDC Identity Provider'
     NotificationEmailAddresses = 'support@netcov.com'
 }
 $Sp = New-MgServicePrincipal @SpParams
@@ -85,7 +85,7 @@ $ConsentUrl = ('{0}/{1}/adminconsent?client_id={2}' -f $ConsentBaseUrl, $TenantI
 $GraphSp = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'"
 
 # Create a client secret
-Write-Host "🔐 Adding client secret..."
+Write-Host "Adding client secret..."
 
 $PasswordCred = $null
 $maxWait = 180  # 3 minutes

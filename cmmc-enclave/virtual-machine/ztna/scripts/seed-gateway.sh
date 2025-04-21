@@ -155,7 +155,7 @@ if [ -z "$gwid" ] || [ "$gwid" == "null" ]; then
   exit 1
 fi
 
-echo "✅ Gateway registered. Appliance ID: $gwid"
+echo "Gateway registered. Appliance ID: $gwid"
 
 echo "[4/8] Exporting seed file to temporary location..."
 

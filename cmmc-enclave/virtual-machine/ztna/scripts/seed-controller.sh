@@ -9,6 +9,8 @@ customershortname="$1"
 adminPass="$2"
 hostname="$3"
 
+echo "[1/1] Seedinging new controller: $hostname..."
+
 cz-seed \
   --dhcp-ipv4 eth0 \
   --appliance-name "${customershortname}-controller" \
@@ -16,3 +18,5 @@ cz-seed \
   --hostname "$hostname" \
   --admin-hostname $hostname \
   --admin-password "$adminPass" > /home/cz/seed.json
+
+  echo "Seeding completed successfully."
