@@ -171,7 +171,7 @@ $GroupParams = @{
     MembershipRuleProcessingState = 'On'
 }
 
-$OidcGroup = New-MgGroup -DisplayName 'Appgate OIDC Users' -MailEnabled:$False  -MailNickName (New-Guid).ToString().Substring(0,10) -SecurityEnabled #New-MgGroup @GroupParams
+$OidcGroup = New-MgGroup @GroupParams
 Write-Host "Group created with Object ID: $($OidcGroup.Id)"
 
 Write-Host "Assigning group to the application (service principal)..."
@@ -183,7 +183,7 @@ $AssignmentParams = @{
     AppRoleId   = '00000000-0000-0000-0000-000000000000'  # default role assignment
 }
 
-#New-MgServicePrincipalAppRoleAssignment @AssignmentParams
+New-MgServicePrincipalAppRoleAssignment @AssignmentParams
 
 Write-Host "Group successfully assigned to application."
 

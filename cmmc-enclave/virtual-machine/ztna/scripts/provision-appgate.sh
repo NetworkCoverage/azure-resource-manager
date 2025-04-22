@@ -29,7 +29,7 @@ required_scripts=(
   enable-full-tunnel-default-site.sh
   create-oidc-idp.sh
   create-full-tunnel-entitlement.sh
-  create-oidc-policy.sh
+  create-tunnel-policy.sh
   create-client-profile.sh
 )
 
@@ -47,7 +47,7 @@ echo "Logging to: $logfile"
 
 echo "[1/7] Seeding controller..."
 ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$adminpass" "$controllerdnsname" < ./seed-controller.sh
-echo "⏳ Waiting 30s for controller to become healthy..."
+echo "Waiting 30s for controller to become healthy..."
 sleep 30
 
 echo "[2/7] Seeding gateway..."
@@ -67,7 +67,7 @@ ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdns
 sleep 5
 
 echo "[6/7] Creating policy for full tunnel entitlement..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" < ./create-oidc-policy.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" < ./create-tunnel-policy.sh
 sleep 5
 
 echo "[7/7] Creating client profile..."

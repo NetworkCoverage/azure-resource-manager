@@ -35,7 +35,7 @@ $RequiredFiles = @(
 )
 
 # Step 1: Download scripts
-Write-Host "Downloading provisioning scripts..."
+Write-Host 'Downloading provisioning scripts...'
 $ScriptBaseUrl = 'https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/ztna/cmmc-enclave/virtual-machine/ztna/scripts'
 $RequiredFiles | ForEach-Object {
     $Url = '{0}/{1}' -f $ScriptBaseUrl, $_
@@ -44,27 +44,27 @@ $RequiredFiles | ForEach-Object {
 }
 
 # Step 2: Ensure Key Vault role
-Write-Host "Checking Key Vault role assignment..."
+Write-Host 'Checking Key Vault role assignment...'
 $CurrentUser = Get-AzADUser -SignedIn
 $Vault = Get-AzKeyVault -VaultName $VaultName
 $RoleAssignments = Get-AzRoleAssignment -ObjectId $CurrentUser.Id -Scope $Vault.ResourceId -ErrorAction SilentlyContinue
-$HasAccess = $RoleAssignments | Where-Object { $_.RoleDefinitionName -eq "Key Vault Administrator" }
+$HasAccess = $RoleAssignments | Where-Object { $_.RoleDefinitionName -eq 'Key Vault Administrator' }
 
 if (-not $HasAccess) {
-    Write-Host "Assigning 'Key Vault Administrator' role..."
+    Write-Host 'Assigning 'Key Vault Administrator' role...'
 
     $RoleParams = @{
         ObjectId           = $CurrentUser.Id
-        RoleDefinitionName = "Key Vault Administrator"
+        RoleDefinitionName = 'Key Vault Administrator'
         Scope              = $Vault.ResourceId
     }
     New-AzRoleAssignment @RoleParams
-    Write-Host "Role assignment complete. Please wait for 30 seconds for the changes to propagate."
+    Write-Host 'Role assignment complete. Waiting for 30 seconds for the changes to propagate.'
     Start-Sleep -Seconds 30
 }
 
 # Step 3: Retrieve SSH keys
-Write-Host "Downloading PEM keys from Key Vault..."
+Write-Host 'Downloading PEM keys from Key Vault...'
 @('ctl', 'gw') | ForEach-Object {
     $Key = $_
     $SecretName = '{0}-{1}-secret' -f $VaultName, $Key
@@ -83,7 +83,7 @@ Write-Host "Downloading PEM keys from Key Vault..."
 }
 
 # Step 4: Validate required files
-Write-Host "Validating script and key files..."
+Write-Host 'Validating script and key files...'
 $Missing = @()
 $RequiredFiles + @('ctl.pem', 'gw.pem') | ForEach-Object {
     if (-not (Test-Path $_)) {
@@ -94,14 +94,14 @@ if ($Missing.Count -gt 0) {
     Write-Host ('Missing files: {0}' -f ($Missing -join ', '))
     exit 1
 }
-Write-Host "All required files are present."
+Write-Host 'All required files are present.'
 
 # Step 5: Run new-oidcapplication.ps1
-Write-Host "Executing new-oidcapplication.ps1..."
+Write-Host 'Executing new-oidcapplication.ps1...'
 .\new-oidcapplication.ps1 -Environment AzureUSGovernment -ControllerDNSName $ControllerDnsName
 
 # Step 6: Parse appgate-iodc-app.json to retrieve Client ID
-$AppJsonPath = "./appgate-iodc-app.json"
+$AppJsonPath = './appgate-iodc-app.json'
 if (-not (Test-Path $AppJsonPath)) {
     Write-Error "The OIDC application metadata file '$AppJsonPath' was not found."
     exit 1
@@ -116,7 +116,7 @@ if (-not $AudienceClientId) {
 }
 
 # Step 7: Write env.sh for Bash
-Write-Host "Writing environment file for Bash..."
+Write-Host 'Writing environment file for Bash...'
 
 @"
 export CUSTOMERSHORTNAME='$CustomerShortName'
@@ -128,8 +128,8 @@ export TENANT_ID='$TenantId'
 export AUDIENCE_ID='$AudienceClientId'
 "@ | Out-File -Encoding ascii ./env.sh
 
-Write-Host ""
-Write-Host "Next steps:"
-Write-Host "1. Type: bash"
-Write-Host "2. Then run: . ./env.sh"
-Write-Host "3. Then run: ./provision-appgate.sh \$CUSTOMERSHORTNAME \$ADMINPASS \$CONTROLLERDNS \$CONTROLLERIP \$GATEWAYDNS \$TENANT_ID \$AUDIENCE_ID"
+Write-Host ''
+Write-Host 'Next steps:'
+Write-Host '1. Type: bash'
+Write-Host '2. Then run: . ./env.sh'
+Write-Host '3. Then run: ./provision-appgate.sh \$CUSTOMERSHORTNAME \$ADMINPASS \$CONTROLLERDNS \$CONTROLLERIP \$GATEWAYDNS \$TENANT_ID \$AUDIENCE_ID'
