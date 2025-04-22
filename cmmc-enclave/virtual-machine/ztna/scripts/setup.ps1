@@ -59,6 +59,7 @@ if (-not $HasAccess) {
         Scope              = $Vault.ResourceId
     }
     New-AzRoleAssignment @RoleParams
+    Write-Host "Role assignment complete. Please wait for 30 seconds for the changes to propagate."
     Start-Sleep -Seconds 30
 }
 

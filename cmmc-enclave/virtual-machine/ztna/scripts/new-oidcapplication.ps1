@@ -183,7 +183,7 @@ $AssignmentParams = @{
     AppRoleId   = '00000000-0000-0000-0000-000000000000'  # default role assignment
 }
 
-New-MgServicePrincipalAppRoleAssignment @AssignmentParams
+#New-MgServicePrincipalAppRoleAssignment @AssignmentParams
 
 Write-Host "Group successfully assigned to application."
 
