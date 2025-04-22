@@ -62,7 +62,7 @@ else {
     Write-Host "Connecting to Microsoft Graph using interactive login with required scopes..."
     Connect-MgGraph @ConnectMgGraphParams    
 
-    Write-Host "Connecting to Azure for RBAC using service principal..."
+    Write-Host "Connecting to Azure for RBAC..."
     Connect-AzAccount -Environment $Environment -UseDeviceAuthentication
 }
 
