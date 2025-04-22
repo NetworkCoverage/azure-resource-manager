@@ -164,14 +164,14 @@ $GroupParams = @{
     DisplayName     = 'Appgate OIDC Users'
     Description     = 'Users allowed to authenticate to Appgate via OIDC'
     MailEnabled     = $false
-    MailNickname    = ('appgate_oidc_users_' + ([guid]::NewGuid().ToString().Substring(0, 8)))
+    MailNickname    = (New-Guid).ToString().Substring(0,10)
     SecurityEnabled = $true
     GroupTypes      = @('DynamicMembership')
     MembershipRule  = $DynamicRule
     MembershipRuleProcessingState = 'On'
 }
 
-$OidcGroup = New-MgGroup @GroupParams
+$OidcGroup = New-MgGroup -DisplayName 'Appgate OIDC Users' -MailEnabled:$False  -MailNickName (New-Guid).ToString().Substring(0,10) -SecurityEnabled #New-MgGroup @GroupParams
 Write-Host "Group created with Object ID: $($OidcGroup.Id)"
 
 Write-Host "Assigning group to the application (service principal)..."

@@ -18,13 +18,7 @@ param (
     [string]$GatewayDnsName,
 
     [Parameter(Mandatory = $true)]
-    [string]$TenantId,
-
-    [Parameter(Mandatory = $true)]
-    [string]$AppClientId,
-
-    [Parameter()]
-    [string]$ScriptBaseUrl = 'https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/ztna/cmmc-enclave/virtual-machine/ztna/scripts'
+    [string]$TenantId
 )
 
 # Step 0: Script file list
@@ -42,6 +36,7 @@ $RequiredFiles = @(
 
 # Step 1: Download scripts
 Write-Host "Downloading provisioning scripts..."
+$ScriptBaseUrl = 'https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/ztna/cmmc-enclave/virtual-machine/ztna/scripts'
 $RequiredFiles | ForEach-Object {
     $Url = '{0}/{1}' -f $ScriptBaseUrl, $_
     Write-Host ('Downloading {0}' -f $_)
@@ -104,7 +99,22 @@ Write-Host "All required files are present."
 Write-Host "Executing new-oidcapplication.ps1..."
 .\new-oidcapplication.ps1 -Environment AzureUSGovernment -ControllerDNSName $ControllerDnsName
 
-# Step 6: Write env.sh for Bash
+# Step 6: Parse appgate-iodc-app.json to retrieve Client ID
+$AppJsonPath = "./appgate-iodc-app.json"
+if (-not (Test-Path $AppJsonPath)) {
+    Write-Error "The OIDC application metadata file '$AppJsonPath' was not found."
+    exit 1
+}
+
+$AppMetadata = Get-Content $AppJsonPath | ConvertFrom-Json
+$AudienceClientId = $AppMetadata.ClientId
+
+if (-not $AudienceClientId) {
+    Write-Error "ClientId is missing or empty in '$AppJsonPath'."
+    exit 1
+}
+
+# Step 7: Write env.sh for Bash
 Write-Host "Writing environment file for Bash..."
 
 @"
@@ -114,7 +124,7 @@ export CONTROLLERDNS='$ControllerDnsName'
 export CONTROLLERIP='$ControllerIp'
 export GATEWAYDNS='$GatewayDnsName'
 export TENANT_ID='$TenantId'
-export AUDIENCE_ID='$AppClientId'
+export AUDIENCE_ID='$AudienceClientId'
 "@ | Out-File -Encoding ascii ./env.sh
 
 Write-Host ""

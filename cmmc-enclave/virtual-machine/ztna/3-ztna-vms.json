@@ -9,23 +9,25 @@
             }
         },
         "sdpVersion": {
-            "defaultValue": "v6_3a_vm",
             "type": "String",
             "metadata": {
-                "description": "Specifies the version of the AppGate SDP virtual machine to be deployed."
-            }
+                "description": "Specifies the version of the Appgate SDP virtual machine to be deployed."
+            },
+            "defaultValue": "v6_3a_vm"
         },
         "fwPublicIpNames": {
             "type": "String",
             "metadata": {
                 "description": "Comma-separated list of public IP resource names associated with the Azure Firewall."
-            }
+            },
+            "defaultValue": "mgmt-usgovvirginia-afw-pip-1, mgmt-usgovvirginia-afw-pip-2"
         },
         "fwPolicyName": {
             "type": "String",
             "metadata": {
                 "description": "Name of the Azure Firewall Policy to associate with rule collections."
-            }
+            },
+            "defaultValue": "mgmt-usgovvirginia-afwp-1"
         },
         "dnatRuleCollectionGroupName": {
             "type": "String",
