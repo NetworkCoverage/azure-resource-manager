@@ -31,6 +31,8 @@ read -r -d '' json_payload <<EOF
   "deviceId": "$deviceid"
 }
 EOF
+echo "$adminPass"
+echo "$json_payload"
 
 response=$(curl --silent --insecure --location --request POST "https://$ctlprivateip:8443/admin/login" \
 --header "Content-Type: application/json" \

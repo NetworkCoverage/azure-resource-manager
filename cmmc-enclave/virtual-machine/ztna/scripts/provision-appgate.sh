@@ -46,10 +46,10 @@ echo "Target Controller: $controllerdnsname"
 echo "Target Gateway: $gatewaydnsname"
 echo "Logging to: $logfile"
 
-echo "[1/7] Seeding controller..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerdnsname" < ./seed-controller.sh
-echo "Waiting 30s for controller to become healthy..."
-sleep 30
+# echo "[1/7] Seeding controller..."
+# ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerdnsname" < ./seed-controller.sh
+# echo "Waiting 30s for controller to become healthy..."
+# sleep 30
 
 echo "[2/7] Seeding gateway..."
 ssh -i ./gw.pem cz@"$gatewaydnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerprivateip" "$gatewaydnsname" < ./seed-gateway.sh
