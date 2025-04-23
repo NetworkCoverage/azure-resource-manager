@@ -19,7 +19,7 @@ else
   echo "$deviceid" > "$DEVICE_ID_FILE"
 fi
 
-echo "[1/4] Logging into Appgate controller..."
+echo "[5.1] Logging into Appgate controller..."
 
 login_payload=$(cat <<EOF
 {
@@ -45,7 +45,7 @@ fi
 
 echo "Authenticated."
 
-echo "[2/4] Retrieving Default Site ID..."
+echo "[5.2] Retrieving Default Site ID..."
 
 sites=$(curl -s --insecure -X GET "https://$ctlhost:8443/admin/sites" \
   -H "Authorization: Bearer $token" \
@@ -60,13 +60,13 @@ fi
 
 echo "Found Default Site ID: $site_id"
 
-echo "[3/4] Generating unique action IDs..."
+echo "[5.3] Generating unique action IDs..."
 
 tcp_action_id=$(cat /proc/sys/kernel/random/uuid)
 udp_action_id=$(cat /proc/sys/kernel/random/uuid)
 icmp_action_id=$(cat /proc/sys/kernel/random/uuid)
 
-echo "[4/4] Creating 'Outbound All Protocols - Full Tunnel' entitlement..."
+echo "[5.4] Creating 'Outbound All Protocols - Full Tunnel' entitlement..."
 
 entitlement_payload=$(cat <<EOF
 {

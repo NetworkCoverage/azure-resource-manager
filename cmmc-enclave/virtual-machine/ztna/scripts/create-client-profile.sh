@@ -19,7 +19,7 @@ else
   echo "$deviceid" > "$DEVICE_ID_FILE"
 fi
 
-echo "[1/2] Logging into Appgate controller..."
+echo "[7.1] Logging into Appgate controller..."
 
 login_payload=$(cat <<EOF
 {
@@ -45,7 +45,7 @@ fi
 
 echo "Authenticated."
 
-echo "[2/2] Creating client profile..."
+echo "[7.2] Creating client profile..."
 
 client_profile_payload=$(cat <<EOF
 {

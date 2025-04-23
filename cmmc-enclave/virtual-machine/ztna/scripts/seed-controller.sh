@@ -11,7 +11,7 @@ adminpass=$(echo "$encodedpass" | base64 -d)
 
 hostname="$3"
 
-echo "[1/1] Seedinging new controller: $hostname..."
+echo "[1.1] Seedinging new controller: $hostname..."
 
 cz-seed \
   --dhcp-ipv4 eth0 \

@@ -46,10 +46,32 @@ echo "Target Controller: $controllerdnsname"
 echo "Target Gateway: $gatewaydnsname"
 echo "Logging to: $logfile"
 
-# echo "[1/7] Seeding controller..."
-# ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encodedpass" "$controllerdnsname" < ./seed-controller.sh
-# echo "Waiting 30s for controller to become healthy..."
-# sleep 30
+echo "[1/7] Seeding controller..."
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerdnsname" < ./seed-controller.sh
+
+echo "Checking for controller health..."
+
+max_wait=180
+interval=5
+elapsed=0
+
+while true; do
+  status=$(ssh -i ./ctl.pem cz@"$controllerdnsname" "sudo cz-config status | jq -r .roles.controller.status" 2>/dev/null || echo "unavailable")
+
+  if [[ "$status" == "healthy" ]]; then
+    echo "Controller is healthy. Proceeding to seed gateway..."
+    break
+  fi
+
+  if (( elapsed >= max_wait )); then
+    echo "Controller did not become healthy within $max_wait seconds."
+    exit 1
+  fi
+
+  echo "Controller status: $status (waiting...)"
+  sleep $interval
+  ((elapsed += interval))
+done
 
 echo "[2/7] Seeding gateway..."
 ssh -i ./gw.pem cz@"$gatewaydnsname" bash -s -- "$customershortname" "$encodedpass" "$controllerprivateip" "$gatewaydnsname" < ./seed-gateway.sh

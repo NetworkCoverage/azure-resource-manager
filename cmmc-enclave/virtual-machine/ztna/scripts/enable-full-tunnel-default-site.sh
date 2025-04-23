@@ -19,7 +19,7 @@ else
   echo "$deviceid" > "$DEVICE_ID_FILE"
 fi
 
-echo "[1/5] Authenticating..."
+echo "[3.1] Authenticating..."
 
 login_payload=$(cat <<EOF
 {
@@ -45,7 +45,7 @@ fi
 
 echo "Authenticated."
 
-echo "[2/5] Fetching site ID..."
+echo "[3.2] Fetching site ID..."
 
 sites=$(curl -s --insecure -X GET "https://$ctlhost:8443/admin/sites" \
   -H "Authorization: Bearer $token" \
@@ -60,13 +60,13 @@ fi
 
 echo "Site ID: $site_id"
 
-echo "[3/5] Retrieving full site config..."
+echo "[3.3] Retrieving full site config..."
 
 site_config=$(curl -s --insecure -X GET "https://$ctlhost:8443/admin/sites/$site_id" \
   -H "Authorization: Bearer $token" \
   -H "Accept: application/vnd.appgate.peer-v19+json")
 
-echo "[4/5] Updating defaultGateway fields..."
+echo "[3.4] Updating defaultGateway fields..."
 
 updated_site=$(echo "$site_config" | jq '.defaultGateway = {
   enabledV4: true,
@@ -74,7 +74,7 @@ updated_site=$(echo "$site_config" | jq '.defaultGateway = {
   excludedSubnets: []
 }')
 
-echo "[5/5] Pushing updated site config..."
+echo "[3.5] Pushing updated site config..."
 
 curl -s --insecure -X PUT "https://$ctlhost:8443/admin/sites/$site_id" \
   -H "Authorization: Bearer $token" \

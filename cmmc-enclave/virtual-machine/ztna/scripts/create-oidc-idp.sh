@@ -21,7 +21,7 @@ else
   echo "$deviceid" > "$DEVICE_ID_FILE"
 fi
 
-echo "[1/4] Logging into Appgate controller..."
+echo "[4.1] Logging into Appgate controller..."
 
 login_payload=$(cat <<EOF
 {
@@ -47,7 +47,7 @@ fi
 
 echo "Authenticated."
 
-echo "[2/4] Retrieving IP Pool ID for 'default pool v4..."
+echo "[4.2] Retrieving IP Pool ID for 'default pool v4..."
 
 ippools=$(curl -s --insecure -X GET "https://$ctlhost:8443/admin/ip-pools" \
   -H "Authorization: Bearer $token" \
@@ -62,7 +62,7 @@ fi
 
 echo "Found IP Pool ID: $ippool"
 
-echo "[3/4] Constructing Identity Provider payload..."
+echo "[4.3] Constructing Identity Provider payload..."
 
 issuer_url="https://login.microsoftonline.us/$tenantid/v2.0"
 
@@ -128,7 +128,7 @@ idp_payload=$(cat <<EOF
 EOF
 )
 
-echo "[4/4] Creating Identity Provider..."
+echo "[4.4] Creating Identity Provider..."
 
 curl -s --insecure -X POST "https://$ctlhost:8443/admin/identity-providers" \
   -H "Authorization: Bearer $token" \

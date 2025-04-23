@@ -21,7 +21,7 @@ else
   echo "$deviceid" > "$DEVICE_ID_FILE"
 fi
 
-echo "[1/8] Logging in to Appgate Controller at $ctlprivateip..."
+echo "[2.1] Logging in to Appgate Controller at $ctlprivateip..."
 
 read -r -d '' json_payload <<EOF
 {
@@ -31,8 +31,6 @@ read -r -d '' json_payload <<EOF
   "deviceId": "$deviceid"
 }
 EOF
-echo "$adminpass"
-echo "$json_payload"
 
 response=$(curl --silent --insecure --location --request POST "https://$ctlprivateip:8443/admin/login" \
 --header "Content-Type: application/json" \
@@ -48,7 +46,7 @@ fi
 
 echo "Logged in. Token retrieved."
 
-echo "[2/8] Getting site ID..."
+echo "[2.2] Getting site ID..."
 
 sites=$(curl --silent --insecure --location --request GET "https://$ctlprivateip:8443/admin/sites" \
 --header "Content-Type: application/json" \
@@ -64,7 +62,7 @@ fi
 
 echo "Site ID: $siteid"
 
-echo "[3/8] Registering new gateway: $customershortname-gateway..."
+echo "[2.3] Registering new gateway: $customershortname-gateway..."
 
 read -r -d '' json_payload <<EOF
 {
@@ -169,7 +167,7 @@ fi
 
 echo "Gateway registered. Appliance ID: $gwid"
 
-echo "[4/8] Exporting seed file to temporary location..."
+echo "[2.4] Exporting seed file to temporary location..."
 
 tmpfile="/home/cz/seed.json.tmp"
 finalfile="/home/cz/seed.json"
@@ -186,7 +184,7 @@ curl --silent --insecure --location --request POST "https://$ctlprivateip:8443/a
 --header "Authorization: Bearer $token" \
 --data "$seed_payload" > "$tmpfile"
 
-echo "[5/8] Verifying export success..."
+echo "[2.5] Verifying export success..."
 
 if [ ! -s "$tmpfile" ]; then
   echo "Seed file export failed or empty."
@@ -195,11 +193,11 @@ fi
 
 echo "Seed file export succeeded."
 
-echo "[6/8] Moving completed seed file into place..."
+echo "[2.6] Moving completed seed file into place..."
 mv "$tmpfile" "$finalfile"
 echo "Moved to $finalfile"
 
-echo "[7/8] Waiting briefly to ensure Appgate reads the file cleanly..."
+echo "[2.7] Waiting briefly to ensure Appgate reads the file cleanly..."
 sleep 1
 
-echo "[8/8] Gateway seeding process completed successfully."
+echo "[2.8] Gateway seeding process completed successfully."
