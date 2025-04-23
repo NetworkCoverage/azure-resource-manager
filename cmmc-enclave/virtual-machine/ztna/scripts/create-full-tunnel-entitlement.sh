@@ -6,8 +6,8 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-encodedPass="$1"
-adminPass=$(echo "$encodedPass" | base64 -d)
+encodedpass="$1"
+adminpass=$(echo "$encodedpass" | base64 -d)
 ctlhost="$2"
 
 DEVICE_ID_FILE="./appgate-device-id.txt"

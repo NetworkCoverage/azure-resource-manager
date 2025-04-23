@@ -6,8 +6,8 @@ if [ "$#" -ne 4 ]; then
   exit 1
 fi
 
-encodedPass="$1"
-adminPass=$(echo "$encodedPass" | base64 -d)
+encodedpass="$1"
+adminpass=$(echo "$encodedpass" | base64 -d)
 ctlhost="$2"
 tenantid="$3"
 audience="$4"

@@ -6,8 +6,8 @@ if [ "$#" -ne 4 ]; then
 fi
 
 customershortname="$1"
-encodedPass="$2"
-adminPass=$(echo "$encodedPass" | base64 -d)
+encodedpass="$2"
+adminpass=$(echo "$encodedpass" | base64 -d)
 
 ctlprivateip="$3"
 gatewaydnsname="$4"
@@ -31,7 +31,7 @@ read -r -d '' json_payload <<EOF
   "deviceId": "$deviceid"
 }
 EOF
-echo "$adminPass"
+echo "$adminpass"
 echo "$json_payload"
 
 response=$(curl --silent --insecure --location --request POST "https://$ctlprivateip:8443/admin/login" \

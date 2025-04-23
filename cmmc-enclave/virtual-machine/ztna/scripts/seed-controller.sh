@@ -6,8 +6,8 @@ if [ "$#" -ne 3 ]; then
 fi
 
 customershortname="$1"
-encodedPass="$2"
-adminPass=$(echo "$encodedPass" | base64 -d)
+encodedpass="$2"
+adminpass=$(echo "$encodedpass" | base64 -d)
 
 hostname="$3"
 
@@ -19,6 +19,6 @@ cz-seed \
   --profile-hostname "$hostname" \
   --hostname "$hostname" \
   --admin-hostname $hostname \
-  --admin-password "$adminPass" > /home/cz/seed.json
+  --admin-password "$adminpass" > /home/cz/seed.json
 
   echo "Seeding completed successfully."
