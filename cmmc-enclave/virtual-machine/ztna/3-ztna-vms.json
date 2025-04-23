@@ -76,7 +76,7 @@
         "gwSshKeygenScript":  "[concat('mgmt-', resourceGroup().location, '-gw-ssh-keygen-script')]",
         "ctlSshKeyName": "[concat('mgmt-', resourceGroup().location, '-ag-ctl-sshkey')]",
         "gwSshKeyName": "[concat('mgmt-', resourceGroup().location, '-ag-gw-sshkey')]",
-        "keyVaultName": "[concat(parameters('customerShortName'), '-', resourceGroup().location, '-mgmt-kv-1')]",
+        "keyVaultName": "[concat(parameters('customerShortName'), '-', resourceGroup().location, '-kv-1')]",
         "ctlSecretName": "[concat(variables('keyVaultName'), '-ctl-secret')]",
         "gwSecretName": "[concat(variables('keyVaultName'), '-gw-secret')]",
         "ctlVmName": "[concat('mgmt-', resourceGroup().location, '-ag-ctl-1')]",
