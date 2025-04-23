@@ -36,7 +36,7 @@ $RequiredFiles = @(
 
 # Step 1: Download scripts
 Write-Host 'Downloading provisioning scripts...'
-$ScriptBaseUrl = 'https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/ztna/cmmc-enclave/virtual-machine/ztna/scripts'
+$ScriptBaseUrl = 'https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/main/cmmc-enclave/virtual-machine/ztna/scripts'
 $RequiredFiles | ForEach-Object {
     $Url = '{0}/{1}' -f $ScriptBaseUrl, $_
     Write-Host ('Downloading {0}' -f $_)
@@ -51,7 +51,7 @@ $RoleAssignments = Get-AzRoleAssignment -ObjectId $CurrentUser.Id -Scope $Vault.
 $HasAccess = $RoleAssignments | Where-Object { $_.RoleDefinitionName -eq 'Key Vault Administrator' }
 
 if (-not $HasAccess) {
-    Write-Host 'Assigning 'Key Vault Administrator' role...'
+    Write-Host "Assigning 'Key Vault Administrator' role..."
 
     $RoleParams = @{
         ObjectId           = $CurrentUser.Id
@@ -59,7 +59,7 @@ if (-not $HasAccess) {
         Scope              = $Vault.ResourceId
     }
     New-AzRoleAssignment @RoleParams
-    Write-Host 'Role assignment complete. Waiting for 30 seconds for the changes to propagate.'
+    Write-Host 'Role assignment complete. Waiting 30 seconds for the changes to propagate.'
     Start-Sleep -Seconds 30
 }
 
@@ -98,7 +98,7 @@ Write-Host 'All required files are present.'
 
 # Step 5: Run new-oidcapplication.ps1
 Write-Host 'Executing new-oidcapplication.ps1...'
-.\new-oidcapplication.ps1 -Environment AzureUSGovernment -ControllerDNSName $ControllerDnsName
+.\new-oidcapplication.ps1 -Environment USGov -ControllerDNSName $ControllerDnsName
 
 # Step 6: Parse appgate-iodc-app.json to retrieve Client ID
 $AppJsonPath = './appgate-iodc-app.json'

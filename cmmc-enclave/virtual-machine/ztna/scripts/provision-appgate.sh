@@ -11,6 +11,7 @@ fi
 # Parameters
 customershortname="$1"
 adminpass="$2"
+encoded_pass=$(printf "%s" "$adminpass" | base64)
 controllerdnsname="$3"
 controllerprivateip="$4"
 gatewaydnsname="$5"
@@ -46,31 +47,31 @@ echo "Target Gateway: $gatewaydnsname"
 echo "Logging to: $logfile"
 
 echo "[1/7] Seeding controller..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$adminpass" "$controllerdnsname" < ./seed-controller.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerdnsname" < ./seed-controller.sh
 echo "Waiting 30s for controller to become healthy..."
 sleep 30
 
 echo "[2/7] Seeding gateway..."
-ssh -i ./gw.pem cz@"$gatewaydnsname" bash -s -- "$customershortname" "$adminpass" "$controllerprivateip" "$gatewaydnsname" < ./seed-gateway.sh
+ssh -i ./gw.pem cz@"$gatewaydnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerprivateip" "$gatewaydnsname" < ./seed-gateway.sh
 sleep 5
 
 echo "[3/7] Enabling full tunnel routing on default site..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" < ./enable-full-tunnel-default-site.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$encoded_pass" "$controllerdnsname" < ./enable-full-tunnel-default-site.sh
 sleep 5
 
 echo "[4/7] Creating OIDC identity provider..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" "$tenant_id" "$audience_client_id" < ./create-oidc-idp.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$encoded_pass" "$controllerdnsname" "$tenant_id" "$audience_client_id" < ./create-oidc-idp.sh
 sleep 5
 
 echo "[5/7] Creating full tunnel entitlement..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" < ./create-full-tunnel-entitlement.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$encoded_pass" "$controllerdnsname" < ./create-full-tunnel-entitlement.sh
 sleep 5
 
 echo "[6/7] Creating policy for full tunnel entitlement..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" < ./create-tunnel-policy.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$encoded_pass" "$controllerdnsname" < ./create-tunnel-policy.sh
 sleep 5
 
 echo "[7/7] Creating client profile..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$adminpass" "$controllerdnsname" < ./create-client-profile.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$encoded_pass" "$controllerdnsname" < ./create-client-profile.sh
 
 echo "All steps completed successfully."

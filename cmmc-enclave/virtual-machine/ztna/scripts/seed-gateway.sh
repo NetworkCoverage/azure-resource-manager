@@ -6,10 +6,20 @@ if [ "$#" -ne 4 ]; then
 fi
 
 customershortname="$1"
-adminpass="$2"
+encodedPass="$2"
+adminPass=$(echo "$encodedPass" | base64 -d)
+
 ctlprivateip="$3"
 gatewaydnsname="$4"
-deviceid=$(cat /proc/sys/kernel/random/uuid)
+
+DEVICE_ID_FILE="./appgate-device-id.txt"
+
+if [ -f "$DEVICE_ID_FILE" ]; then
+  deviceid=$(cat "$DEVICE_ID_FILE")
+else
+  deviceid=$(cat /proc/sys/kernel/random/uuid)
+  echo "$deviceid" > "$DEVICE_ID_FILE"
+fi
 
 echo "[1/8] Logging in to Appgate Controller at $ctlprivateip..."
 

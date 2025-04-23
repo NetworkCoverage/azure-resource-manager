@@ -6,7 +6,9 @@ if [ "$#" -ne 3 ]; then
 fi
 
 customershortname="$1"
-adminPass="$2"
+encodedPass="$2"
+adminPass=$(echo "$encodedPass" | base64 -d)
+
 hostname="$3"
 
 echo "[1/1] Seedinging new controller: $hostname..."

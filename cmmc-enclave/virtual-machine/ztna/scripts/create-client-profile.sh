@@ -6,9 +6,18 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-adminpass="$1"
+encodedPass="$1"
+adminPass=$(echo "$encodedPass" | base64 -d)
 ctlhost="$2"
-deviceid=$(cat /proc/sys/kernel/random/uuid)
+
+DEVICE_ID_FILE="./appgate-device-id.txt"
+
+if [ -f "$DEVICE_ID_FILE" ]; then
+  deviceid=$(cat "$DEVICE_ID_FILE")
+else
+  deviceid=$(cat /proc/sys/kernel/random/uuid)
+  echo "$deviceid" > "$DEVICE_ID_FILE"
+fi
 
 echo "[1/2] Logging into Appgate controller..."
 

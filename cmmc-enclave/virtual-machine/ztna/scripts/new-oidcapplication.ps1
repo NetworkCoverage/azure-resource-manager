@@ -1,7 +1,7 @@
 param (
     [Parameter()]
-    [ValidateSet('AzureCloud', 'AzureUSGovernment')]
-    [System.String]$Environment = 'AzureCloud',
+    [ValidateSet('Global', 'USGov')]
+    [System.String]$Environment = 'Global',
 
     [Parameter(Mandatory = $true)]
     [System.String]$ControllerDNSName,
@@ -20,18 +20,12 @@ param (
 $ConnectMgGraphParams = @{
     NoWelcome = $true        
     Scopes = 'Group.ReadWrite.All', 'Directory.ReadWrite.All', 'Application.ReadWrite.All', 'DelegatedPermissionGrant.ReadWrite.All'
-    Environment = if ($Environment -eq 'AzureUSGovernment') {'USGov'} else {'Global'}
+    Environment = $Environment
 }
 Write-Host 'Connecting to Microsoft Graph using interactive login with required scopes...'
 Connect-MgGraph @ConnectMgGraphParams    
 
-$ConnectAzAccountParams = @{
-    Environment = $Environment
-    UseDeviceAuthentication = if ($env:ACC_CLOUD -or $env:AZUREPS_HOST_ENVIRONMENT -like '*CloudShell*') {$true} else {$false}
-}
-Write-Host 'Connecting to Azure...'
-Connect-AzAccount @ConnectAzAccountParams | Out-Null
-$TenantId = (Get-AzContext).Tenant.Id
+$TenantId = (Get-MgContext).TenantId
 
 Write-Host 'Creating OIDC App...'
 # Create the OIDC App
@@ -62,8 +56,11 @@ $AppParams = @{
             Type = 'Scope'
         })
     })
+    passwordCred = @(@{
+        DisplayName = 'Created with PowerShell'
+        EndDateTime = (Get-Date).AddYears(2)
+    })
 }
-
 $App = New-MgApplication @AppParams
 
 Write-Host 'Creating service principal...'
@@ -87,47 +84,6 @@ $ConsentUrl = ('{0}/{1}/adminconsent?client_id={2}' -f $ConsentBaseUrl, $TenantI
 # Get the Microsoft Graph service principal
 # This is needed to grant admin consent for the app to use Microsoft Graph API
 $GraphSp = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'"
-
-# Create a client secret
-Write-Host "Adding client secret..."
-
-$PasswordCred = $null
-$maxWait = 180  # 3 minutes
-$interval = 5
-$elapsed = 0
-
-while (-not $PasswordCred -and $elapsed -lt $maxWait) {
-    try {
-        $PasswordCred = New-AzADAppCredential -ApplicationId $App.AppId -EndDate (Get-Date).AddDays(180) -ErrorAction SilentlyContinue
-    } catch {
-        if ($_.Exception.Message -like "*does not exist*") {
-            Write-Host "Waiting for application to become available... retrying in $interval seconds"
-            Start-Sleep -Seconds $interval
-            $elapsed += $interval
-        } else {
-            throw $_
-        }
-    }
-}
-
-if (-not $PasswordCred) {
-    Write-Warning "Timed out waiting for application to become available after $maxWait seconds."
-    Write-Host "Cleaning up application and service principal..."
-
-    try {
-        if ($Sp) {
-            Remove-MgServicePrincipal -ServicePrincipalId $Sp.Id -ErrorAction SilentlyContinue
-        }
-        if ($App) {
-            Remove-MgApplication -ApplicationId $App.Id -ErrorAction SilentlyContinue
-        }
-        Write-Host "Cleanup completed."
-    } catch {
-        Write-Warning "Cleanup encountered an error: $_"
-    }
-
-    throw "Exiting script due to client secret creation failure."
-}
 
 # Admin Consent Logic
 if (-not $GrantConsent -or -not $GraphSp) {
@@ -172,18 +128,19 @@ $GroupParams = @{
 }
 
 $OidcGroup = New-MgGroup @GroupParams
-Write-Host "Group created with Object ID: $($OidcGroup.Id)"
+Write-Host "Group created with Object ID: $($OidcGroup.Id). Waiting 30 seconds for group to be ready..."
+Start-Sleep -Seconds 30
 
 Write-Host "Assigning group to the application (service principal)..."
 
 # Assign the group to the service principal
 $AssignmentParams = @{
-    PrincipalId = $OidcGroup.Id             # the group
-    ServicePrincipalId  = $Sp.Id                    # the app's service principal
-    AppRoleId   = '00000000-0000-0000-0000-000000000000'  # default role assignment
+    GroupId = $OidcGroup.Id 
+    PrincipalId = $OidcGroup.Id  
+    ResourceId = $Sp.Id                    
+    AppRoleId = '00000000-0000-0000-0000-000000000000'  # default role assignment
 }
-
-New-MgServicePrincipalAppRoleAssignment @AssignmentParams
+New-MgGroupAppRoleAssignment @AssignmentParams
 
 Write-Host "Group successfully assigned to application."
 
@@ -191,7 +148,7 @@ Write-Host "Group successfully assigned to application."
 Write-Host ('App registration complete')
 Write-Host ('Display Name           : {0}' -f $App.DisplayName)
 Write-Host ('Client ID              : {0}' -f $App.AppId)
-Write-Host ('ClientSecret           : {0}' -f $PasswordCred.SecretText)
+Write-Host ('ClientSecret           : {0}' -f $App.PasswordCredentials.SecretText)
 Write-Host ('Object ID              : {0}' -f $App.Id)
 Write-Host ('Service Principal ID   : {0}' -f $Sp.Id)
 Write-Host ('Tenant ID              : {0}' -f $TenantId)
