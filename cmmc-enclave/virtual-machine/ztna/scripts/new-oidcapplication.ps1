@@ -140,9 +140,7 @@ $AssignmentParams = @{
     ResourceId = $Sp.Id                    
     AppRoleId = '00000000-0000-0000-0000-000000000000'  # default role assignment
 }
-New-MgGroupAppRoleAssignment @AssignmentParams
-
-Write-Host "Group successfully assigned to application."
+New-MgGroupAppRoleAssignment @AssignmentParams | Out-Null
 
 # Output useful data
 Write-Host ('App registration complete')
