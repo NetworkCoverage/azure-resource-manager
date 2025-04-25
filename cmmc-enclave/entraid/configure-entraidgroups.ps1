@@ -1,3 +1,4 @@
+# Unify Graph PowerShell and Azure PowerSehll logic 
 param (
     [Parameter(Mandatory = $true, ParameterSetName = 'Default')]
     [Parameter(Mandatory = $true, ParameterSetName = 'DeploymentScript')]

@@ -47,7 +47,7 @@ echo "Target Gateway: $gatewaydnsname"
 echo "Logging to: $logfile"
 
 echo "[1/7] Seeding controller..."
-ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encoded_pass" "$controllerdnsname" < ./seed-controller.sh
+ssh -i ./ctl.pem cz@"$controllerdnsname" bash -s -- "$customershortname" "$encodedpass" "$controllerdnsname" < ./seed-controller.sh
 
 echo "Checking for controller health..."
 

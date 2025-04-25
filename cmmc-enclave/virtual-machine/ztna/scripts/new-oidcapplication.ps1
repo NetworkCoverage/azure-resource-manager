@@ -1,3 +1,4 @@
+# Unify Graph PowerShell and Azure PowerSehll logic 
 param (
     [Parameter()]
     [ValidateSet('Global', 'USGov')]
@@ -56,7 +57,7 @@ $AppParams = @{
             Type = 'Scope'
         })
     })
-    passwordCred = @(@{
+    PasswordCredentials = @(@{
         DisplayName = 'Created with PowerShell'
         EndDateTime = (Get-Date).AddYears(2)
     })
@@ -157,7 +158,7 @@ Write-Host ('OIDC issuer            : {0}/{1}/v2.0' -f $ConsentBaseUrl, $TenantI
 $AppMetadata = @{
     DisplayName        = $App.DisplayName
     ClientId           = $App.AppId
-    ClientSecret       = $PasswordCred.SecretText
+    ClientSecret       = $App.PasswordCredentials.SecretText
     TenantId           = $TenantId
     ObjectId           = $App.Id
     ServicePrincipalId = $Sp.Id
@@ -165,7 +166,7 @@ $AppMetadata = @{
     OidcIssuer         = ('{0}/{1}/v2.0' -f $ConsentBaseUrl, $TenantId)
 }
 
-$JsonPath = "appgate-iodc-app.json"
+$JsonPath = "appgate-oidc-app.json"
 $AppMetadata | ConvertTo-Json -Depth 3 | Set-Content -Path $JsonPath -Encoding UTF8
 
 Write-Host ("App metadata saved to file: {0}" -f (Resolve-Path $JsonPath))

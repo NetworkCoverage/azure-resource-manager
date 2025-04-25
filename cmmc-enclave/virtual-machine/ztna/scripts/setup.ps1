@@ -58,7 +58,7 @@ if (-not $HasAccess) {
         RoleDefinitionName = 'Key Vault Administrator'
         Scope              = $Vault.ResourceId
     }
-    New-AzRoleAssignment @RoleParams
+    New-AzRoleAssignment @RoleParams | Out-Null
     Write-Host 'Role assignment complete. Waiting 30 seconds for the changes to propagate.'
     Start-Sleep -Seconds 30
 }
