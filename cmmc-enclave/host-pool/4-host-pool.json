@@ -27,14 +27,14 @@
             },
             "defaultValue": "Desktop"
         },
-        "hostpoolType": {
+        "hostPoolType": {
             "type": "string",
             "allowedValues": [
                 "Personal",
                 "Pooled"
             ],
             "metadata": {
-                "description": "Set this parameter to Personal if you would like to enable Persistent Desktop experience. Defaults to false."
+                "description": "Specifies the host pool type: 'Pooled' for multi-session hosts (shared desktops using a multi-user image), or 'Personal' for single-session hosts (dedicated desktops using a standard image)."
             }
         },
         "maxSessionLimit": {
@@ -59,20 +59,20 @@
     "variables": {
         "logAnalyticsWorkspaceApiVersion": "2023-09-01",
         "diagnosticSettingsApiVersion": "2021-05-01-preview",
-        "hostpoolApiVersion": "2024-11-01-preview",
+        "hostPoolApiVersion": "2024-11-01-preview",
         "applicationGroupApiVersion": "2024-11-01-preview",
         "desktopVirtualizationWorkspacesApiVersion": "2024-01-16-preview",
-        "hostpoolName": "[if(parameters('isManagementHostPool'), concat('mgmt-', resourceGroup().location, '-vdpool-1'), concat(parameters('customerShortName'), '-', resourceGroup().location, '-vdpool-1'))]",
-        "hostpoolFriendlyName": "[if(parameters('isManagementHostPool'), 'Management Host Pool', concat(parameters('customerShortName'), ' Host Pool'))]",
-        "logAnalyticsWorkspaceName": "[concat(variables('hostpoolName'), '-log')]",        
-        "applicationGroupsName": "[concat(variables('hostpoolName'), '-dag')]",
-        "desktopVirtualizationWorkspacesName": "[concat(variables('hostpoolName'), '-vdws-1')]",
+        "hostPoolName": "[if(parameters('isManagementHostPool'), concat('mgmt-', resourceGroup().location, '-vdpool-1'), concat(parameters('customerShortName'), '-', resourceGroup().location, '-vdpool-1'))]",
+        "hostPoolFriendlyName": "[if(parameters('isManagementHostPool'), 'Management Host Pool', concat(parameters('customerShortName'), ' Host Pool'))]",
+        "logAnalyticsWorkspaceName": "[concat(variables('hostPoolName'), '-log')]",        
+        "applicationGroupsName": "[concat(variables('hostPoolName'), '-dag')]",
+        "desktopVirtualizationWorkspacesName": "[concat(variables('hostPoolName'), '-vdws-1')]",
         "desktopVirtualizationWorkspacesDescription": "[format('Grouping of {0} application groups.', if(parameters('isManagementHostPool'), 'management', parameters('customerShortName')))]",
         "desktopVirtualizationWorkspacesFriendlyName": "[format('{0} Workspace', if(parameters('isManagementHostPool'), concat(parameters('customerShortName'), 'Management'), parameters('customerShortName')))]",
-        "personalDesktopAssignmentType": "[if(equals(parameters('hostpoolType'), 'Personal'), 'Automatic', null())]",
+        "personalDesktopAssignmentType": "[if(equals(parameters('hostPoolType'), 'Personal'), 'Automatic', null())]",
         "customRdpProperty" : "enablerdsaadauth:i:1;enablecredsspsupport:i:1;videoplaybackmode:i:1;audiocapturemode:i:1;audiomode:i:0;camerastoredirect:s:*;devicestoredirect:s:;drivestoredirect:s:;redirectclipboard:i:0;redirectcomports:i:0;redirectprinters:i:0;redirectsmartcards:i:0;usbdevicestoredirect:s:;use multimon:i:1;dynamic resolution:i:1;autoreconnection enabled:i:0;bandwidthautodetect:i:1;networkautodetect:i:1;redirectwebauthn:i:1;",
-        "loadBalancerType": "[if(equals(parameters('hostpoolType'), 'Personal'),'Persistent', parameters('loadBalancerType'))]",
-        "hostpoolDiagnosticSettingsLogCategories": [
+        "loadBalancerType": "[if(equals(parameters('hostPoolType'), 'Personal'),'Persistent', parameters('loadBalancerType'))]",
+        "hostPoolDiagnosticSettingsLogCategories": [
             "Checkpoint",
             "Error",
             "Management",
@@ -95,10 +95,10 @@
         ],
         "copy": [
             {
-                "name": "hostpoolDiagnosticSettingsLogProperties",
-                "count": "[length(variables('hostpoolDiagnosticSettingsLogCategories'))]",
+                "name": "hostPoolDiagnosticSettingsLogProperties",
+                "count": "[length(variables('hostPoolDiagnosticSettingsLogCategories'))]",
                 "input": {
-                    "category": "[variables('hostpoolDiagnosticSettingsLogCategories')[copyIndex('hostpoolDiagnosticSettingsLogProperties')]]",
+                    "category": "[variables('hostPoolDiagnosticSettingsLogCategories')[copyIndex('hostPoolDiagnosticSettingsLogProperties')]]",
                     "enabled": true
                 }
             },
@@ -142,17 +142,17 @@
             }
         },
         {
-            "name": "[variables('hostpoolName')]",
+            "name": "[variables('hostPoolName')]",
             "type": "Microsoft.DesktopVirtualization/hostPools",
-            "apiVersion": "[variables('hostpoolApiVersion')]",
+            "apiVersion": "[variables('hostPoolApiVersion')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.OperationalInsights/workspaces/', variables('logAnalyticsWorkspaceName'))]"
             ],
             "properties": {
-                "friendlyName": "[variables('hostpoolFriendlyName')]",
-                "description": "[variables('hostpoolFriendlyName')]",
-                "hostpoolType": "[parameters('hostpoolType')]",
+                "friendlyName": "[variables('hostPoolFriendlyName')]",
+                "description": "[variables('hostPoolFriendlyName')]",
+                "hostPoolType": "[parameters('hostPoolType')]",
                 "personalDesktopAssignmentType": "[variables('personalDesktopAssignmentType')]",
                 "maxSessionLimit": "[parameters('maxSessionLimit')]",
                 "loadBalancerType": "[variables('loadBalancerType')]",
@@ -170,11 +170,11 @@
                     "type": "providers/diagnosticSettings",
                     "apiVersion": "[variables('diagnosticSettingsApiVersion')]",
                     "properties": {
-                        "workspaceId": "[resourceId(resourceGroup().name, 'Microsoft.OperationalInsights/workspaces', concat(variables('hostpoolName'), '-log'))]",
-                        "logs": "[variables('hostpoolDiagnosticSettingsLogProperties')]"
+                        "workspaceId": "[resourceId(resourceGroup().name, 'Microsoft.OperationalInsights/workspaces', concat(variables('hostPoolName'), '-log'))]",
+                        "logs": "[variables('hostPoolDiagnosticSettingsLogProperties')]"
                     },
                     "dependsOn": [
-                        "[variables('hostpoolName')]"
+                        "[variables('hostPoolName')]"
                     ]
                 }
             ]
@@ -185,10 +185,10 @@
             "apiVersion": "[variables('applicationGroupApiVersion')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.DesktopVirtualization/hostpools/', variables('hostpoolName'))]"
+                "[resourceId('Microsoft.DesktopVirtualization/hostPools/', variables('hostPoolName'))]"
             ],
             "properties": {
-                "hostpoolarmpath": "[resourceId('Microsoft.DesktopVirtualization/hostpools/', variables('hostpoolName'))]",
+                "hostPoolarmpath": "[resourceId('Microsoft.DesktopVirtualization/hostPools/', variables('hostPoolName'))]",
                 "friendlyName": "Default Desktop",
                 "description": "Desktop Application Group",
                 "applicationGroupType": "Desktop"
@@ -199,7 +199,7 @@
                     "type": "providers/diagnosticSettings",
                     "apiVersion": "[variables('diagnosticSettingsApiVersion')]",
                     "properties": {
-                        "workspaceId": "[resourceId(resourceGroup().name, 'Microsoft.OperationalInsights/workspaces', concat(variables('hostpoolName'), '-log'))]",
+                        "workspaceId": "[resourceId(resourceGroup().name, 'Microsoft.OperationalInsights/workspaces', concat(variables('hostPoolName'), '-log'))]",
                         "logs": "[variables('appGroupDiagnosticSettingsLogProperties')]"
                     },
                     "dependsOn": [
@@ -229,7 +229,7 @@
                     "type": "providers/diagnosticSettings",
                     "apiVersion": "[variables('diagnosticSettingsApiVersion')]",
                     "properties": {
-                        "workspaceId": "[resourceId(resourceGroup().name, 'Microsoft.OperationalInsights/workspaces', concat(variables('hostpoolName'), '-log'))]",
+                        "workspaceId": "[resourceId(resourceGroup().name, 'Microsoft.OperationalInsights/workspaces', concat(variables('hostPoolName'), '-log'))]",
                         "logs": "[variables('workspaceDiagnosticSettingsLogProperties')]"
                     },
                     "dependsOn": [
@@ -240,9 +240,9 @@
         }
     ],
     "outputs": {
-        "hostpoolName": {
+        "hostPoolName": {
             "type": "string",
-            "value": "[variables('hostpoolName')]"
+            "value": "[variables('hostPoolName')]"
         }
     }
 }

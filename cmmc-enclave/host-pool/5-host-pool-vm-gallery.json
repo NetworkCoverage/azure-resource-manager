@@ -1,0 +1,418 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "isManagementHostPool": {
+            "type": "bool",
+            "metadata": {
+                "description": "Indicates whether the Azure AVD host pool is designated for management purposes. Set to true if the host pool is intended for administrative use, otherwise false."
+            },
+            "defaultValue": false
+        },
+        "hostPoolType": {
+            "type": "string",
+            "allowedValues": [
+                "Personal",
+                "Pooled"
+            ],
+            "metadata": {
+                "description": "Specifies the host pool type: 'Pooled' for multi-session hosts or 'Personal' for single-session hosts. This value determines the image offer and SKU to be used."
+            },
+            "defaultValue": "Pooled"
+        },
+        "customerShortName": {
+            "type": "string",
+            "metadata": {
+                "description": "(Required when isManagementHostPool = false) The abbreviated name of the customer"
+            },
+            "defaultValue": ""
+        },
+        "utcTime": {
+            "type": "string",
+            "defaultValue": "[utcNow('u')]",
+            "metadata": {
+                "description": "Auto-generated UTC timestamp for deployment. Do not modify."
+            }
+        },
+        "vmNumberOfInstances": {
+            "type": "int",
+            "metadata": {
+                "description": "Number of session hosts that will be created and added to the host pool."
+            }
+        },
+        "vmOperatingSystemVersion": {
+            "type": "string",
+            "allowedValues": [
+                "Windows-10",
+                "Windows-11"
+            ],
+            "metadata": {
+                "description": "The operating system to be used by the session host VMs. This value is used to determine the image offer and SKU."
+            },
+            "defaultValue": "Windows-11"
+        },
+        //az vm list-sizes --location usgovvirginia --query "[?name=='Standard_D2s_v3']" --output json | jq '[.[] | select(.memoryInMB != null) | {Name: .name, NumberOfCores: .numberOfCores, MemoryInGB: (.memoryInMB / 1024)}]'
+        "vmSize": {
+            "type": "string",
+            "allowedValues": [
+            "Standard_D2s_v5",
+            "Standard_D4s_v5",
+            "Standard_D8s_v5",
+            "Standard_D16s_v5",
+            "Standard_E4s_v5",
+            "Standard_E8s_v5",
+            "Standard_E16s_v5",
+            "Standard_F4s_v2",
+            "Standard_F8s_v2",
+            "Standard_F16s_v2",
+            "Standard_NC8as_T4_v3",
+            "Standard_NC16as_T4_v3"
+            ],
+            "metadata": {
+            "description": "Specifies the Azure VM size to use for the AVD session host. Choose a size based on whether the VM will be used for personal (1:1) or multi-session (pooled) AVD, or if GPU acceleration is required (NCas-series)."
+            },
+            "defaultValue": "Standard_D2s_v5"
+        },
+        "vmDiskType": {
+            "type": "string",
+            "allowedValues": [ 
+                "Premium_LRS",
+                "StandardSSD_LRS",
+                "Standard_LRS"
+            ],
+            "metadata": {
+                "description": "Specifies the storage type to be used for the VM's OS disk. Choose from Premium SSD (Premium_LRS), Standard SSD (StandardSSD_LRS), or Standard HDD (Standard_LRS) based on performance and cost requirements."
+            },
+            "defaultValue": "Premium_LRS"
+        },
+        "existingVnetResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the resource group that contains the existing virtual network where the VMs will be deployed. Defaults to the current deployment's resource group."
+            },
+            "defaultValue": "[resourceGroup().name]"
+        },
+        "existingVnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the existing virtual network to which the virtual machines will be connected."
+            }
+        },
+        "existingSubnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the existing subnet within the specified VNet where the virtual machines will be deployed."
+            }
+        },
+        "entraIdJoin": {
+            "type": "bool",
+            "metadata": {
+                "description": "True if Entra ID join, false if Active Directory join"
+            },
+            "defaultValue": true
+        },
+        "intune": {
+            "type": "bool",
+            "metadata": {
+                "description": " True if intune enrollment, false otherwise"
+            },
+            "defaultValue": true
+        },
+        "vmAdministratorAccountUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "A username to be used as the virtual machine administrator account. The vmAdministratorAccountUsername and vmAdministratorAccountPassword parameters must both be provided."
+            }
+        },
+        "vmAdministratorAccountPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The password associated with the virtual machine administrator account. The vmAdministratorAccountUsername and vmAdministratorAccountPassword parameters must both be provided."
+            }
+        },
+        "domainFqdn": {
+            "type": "string",
+            "metadata": {
+                "description": "(Required when entraIdJoin = false) Fully qualified domain name of the domain to join"
+            },
+            "defaultValue": ""
+        },
+        "domainAccountUserPrincipalName": {
+            "type": "string",
+            "metadata": {
+                "description": "The User Principal Name (UPN) of the domain account authorized to join the machine to the domain."
+            },
+            "defaultValue": ""
+        },
+        "domainAccountPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The password that corresponds to the domain account."
+            },
+            "defaultValue": ""
+        },
+        "ouPath": {
+            "type": "string",
+            "metadata": {
+                "description": "(Optional however only specified when entraIdJoin = false) Organizational Unit (OU) path where the machine will be placed when joined to the domain."
+            },
+            "defaultValue": ""
+        }
+    },
+    "variables": {
+        "hostPoolApiVersion": "2024-11-01-preview",
+        "networkInterfacesApiVersion": "2024-05-01",
+        "virtualMachinesApiVersion": "2024-11-01",
+        "virtualMachinesExtensionsApiVersion": "2024-11-01",
+        "hostPoolName": "[if(parameters('isManagementHostPool'), concat('mgmt-', resourceGroup().location, '-vdpool-1'), concat(parameters('customerShortName'), '-', resourceGroup().location, '-vdpool-1'))]",
+        "vmNamePrefix": "[if(parameters('isManagementHostPool'), 'mgmt-avd', concat(parameters('customerShortName'), '-avd'))]",
+        "vmImageType": "Gallery",
+        "vmGalleryImageOffer": "[if(not(equals(parameters('hostPoolType'), 'Pooled')), if(equals(parameters('vmOperatingSystemVersion'), 'Windows-11'), 'windows-11', 'Windows-10'), 'office-365')]",
+        "vmGalleryImagePublisher":"MicrosoftWindowsDesktop",
+        "vmGalleryImageSKU": "[if(equals(variables('vmGalleryImageOffer'), 'office-365'), if(equals(parameters('vmOperatingSystemVersion'), 'Windows-11'), 'win11-24h2-avd-m365', 'win10-22h2-avd-m365-g2'), if(equals(variables('vmGalleryImageOffer'), 'windows-11'), 'win11-24h2-ent', if(equals(variables('vmGalleryImageOffer'), 'Windows-10'), 'win10-22h2-ent', 'win11-24h2-avd-m365')))]",
+        "vmSkuMap": {
+            "Standard_D2s_v5": {"cores": 2,  "memoryInGB": 8},
+            "Standard_D4s_v5": {"cores": 4,  "memoryInGB": 16},
+            "Standard_D8s_v5": {"cores": 8,  "memoryInGB": 32},
+            "Standard_D16s_v5": {"cores": 16, "memoryInGB": 64},
+            "Standard_E4s_v5": {"cores": 4,  "memoryInGB": 32},
+            "Standard_E8s_v5": {"cores": 8,  "memoryInGB": 64},
+            "Standard_E16s_v5": {"cores": 16, "memoryInGB": 128},
+            "Standard_F4s_v2": {"cores": 4,  "memoryInGB": 8},
+            "Standard_F8s_v2": {"cores": 8,  "memoryInGB": 16},
+            "Standard_F16s_v2": {"cores": 16, "memoryInGB": 32},
+            "Standard_NC8as_T4_v3": {"cores": 8,  "memoryInGB": 56},
+            "Standard_NC16as_T4_v3": {"cores": 16, "memoryInGB": 112}
+        },
+        "vmTemplate": [
+            {
+                "domain": "[if(not(equals(parameters('domainFqdn'), '')), parameters('domainFqdn'), '')]",
+                "galleryImageOffer": "[variables('vmGalleryImageOffer')]",
+                "galleryImagePublisher": "[variables('vmGalleryImagePublisher')]",
+                "galleryImageSKU": "[variables('vmGalleryImageSKU')]",
+                "imageType": "[variables('vmImageType')]",
+                "namePrefix": "[variables('vmNamePrefix')]",
+                "osDiskType": "[parameters('vmDiskType')]",
+                "vmSize": {
+                    "id": "[parameters('vmSize')]",
+                    "cores": "[variables('vmSkuMap')[parameters('vmSize')].cores]",
+                    "ram": "[variables('vmSkuMap')[parameters('vmSize')].memoryInGB]",
+                    "rdmaEnabled": false,
+                    "supportsMemoryPreservingMaintenance": true
+                },
+                "galleryItemId": "[concat(toLower(variables('vmGalleryImagePublisher')),'.', variables('vmGalleryImageSKU'))]",
+                "hibernate":false,
+                "securityType":"TrustedLaunch",
+                "secureBoot":true,
+                "vTPM":true,
+                "vmInfrastructureType":"Cloud",
+                "virtualProcessorCount":null,
+                "memoryGB":null,
+                "maximumMemoryGB":null,
+                "minimumMemoryGB":null,
+                "dynamicMemoryConfig":false
+            }
+        ],
+        "subnet-id": "[resourceId(parameters('existingVnetResourceGroupName'),'Microsoft.Network/virtualNetworks/subnets',parameters('existingVnetName'), parameters('existingSubnetName'))]",
+        "copy": [
+            {
+                "name": "vmName",
+                "count": "[parameters('vmNumberOfInstances')]",
+                "input": "[concat(variables('vmNamePrefix'), '-', toLower(take(uniqueString(guid(concat(deployment().name, copyIndex('vmName'))), parameters('utcTime')), 4)))]"
+            }
+        ],
+        "vmGalleryImageReference": {
+            "publisher": "[variables('vmGalleryImagePublisher')]",
+            "offer": "[variables('vmGalleryImageOffer')]",
+            "sku": "[variables('vmGalleryImageSKU')]",
+            "version": "latest"
+        }
+    },
+    "resources": [
+        {
+            "name": "[variables('hostPoolName')]",
+            "type": "Microsoft.DesktopVirtualization/hostPools",
+            "apiVersion": "[variables('hostPoolApiVersion')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "registrationInfo": {
+                    "expirationTime": "[dateTimeAdd(parameters('utcTime'), 'P9D')]",
+                    "registrationTokenOperation": "Update"
+                },
+                "vmTemplate": "[string(variables('vmTemplate'))]"            
+            }
+        },
+        {
+            "name": "[concat(variables('vmName')[copyIndex()], '-nic')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "[variables('networkInterfacesApiVersion')]",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "rdsh-nic-loop",
+                "count": "[parameters('vmNumberOfInstances')]"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnet-id')]"
+                            }
+                        }
+                    }
+                ],
+                "enableAcceleratedNetworking": true
+            }
+        },
+        {
+            "name": "[variables('vmName')[copyIndex()]]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "[variables('virtualMachinesApiVersion')]",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "rdsh-vm-loop",
+                "count": "[parameters('vmNumberOfInstances')]"
+            },
+            "dependsOn": [
+                "[concat(variables('vmName')[copyIndex()], '-nic')]"
+            ],
+            "identity": {
+                "type": "[if(parameters('entraIdJoin'), 'SystemAssigned', 'None')]"
+            },
+            "properties": {
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "licenseType": "Windows_Client",
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmName')[copyIndex()], '-nic'))]",
+                            "properties": {
+                                "deleteOption": "Delete"
+                            }
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')[copyIndex()]]",
+                    "adminUsername": "[parameters('vmAdministratorAccountUsername')]",
+                    "adminPassword": "[parameters('vmAdministratorAccountPassword')]"
+                },
+                "securityProfile": {
+                    "uefiSettings": {
+                        "secureBootEnabled": true,
+                        "vTpmEnabled": true
+                    },
+                    "securityType": "TrustedLaunch"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('vmGalleryImageReference')]",
+                    "osDisk": {
+                        "name": "[concat(variables('vmName')[copyIndex()], '-osdisk')]",
+                        "createOption": "FromImage",
+                        "deleteOption": "Delete",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('vmDiskType')]"
+                        }
+                    }
+                }
+            },
+            "resources": [
+                // join vm to host pool
+                {
+                    "name": "Microsoft.PowerShell.DSC",
+                    "type": "extensions",
+                    "apiVersion": "[variables('virtualMachinesExtensionsApiVersion')]",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[variables('vmName')[copyIndex()]]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.73",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "modulesUrl": "https://wvdportalstorageblob.blob.core.usgovcloudapi.net/galleryartifacts/Configuration_1.0.02929.635.zip",
+                            "configurationFunction": "Configuration.ps1\\AddSessionHost",
+                            "properties": {
+                                "hostPoolName": "[variables('hostPoolName')]",
+                                "registrationInfoToken": "[reference(variables('hostPoolName')).registrationInfo.token]",
+                                "aadJoin": "[parameters('entraIdJoin')]",
+                                "UseAgentDownloadEndpoint": true,
+                                "aadJoinPreview": false,
+                                "mdmId": "[if(parameters('intune'), '0000000a-0000-0000-c000-000000000000', '')]",
+                                "sessionHostConfigurationLastUpdateTime": ""
+                            }
+                        }
+                    }
+                },
+                // join machine to entra id - if entraIdJoin parameter is true
+                {
+                    "name": "AADLoginForWindows",
+                    "type": "extensions",
+                    "apiVersion": "[variables('virtualMachinesExtensionsApiVersion')]",
+                    "location": "[resourceGroup().location]",
+                    "condition": "[parameters('entraIdJoin')]",
+                    "dependsOn": [
+                        "[variables('vmName')[copyIndex()]]",
+                        "Microsoft.PowerShell.DSC"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Azure.ActiveDirectory",
+                        "type": "AADLoginForWindows",
+                        "typeHandlerVersion": "1.0",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": "[if(parameters('intune'), createObject('mdmId','0000000a-0000-0000-c000-000000000000'), json('null'))]"
+                    }
+                },
+                // join machine to active directory - if entraIdJoin parameter is false
+                {
+                    "name": "joindomain",
+                    "type": "extensions",
+                    "apiVersion": "[variables('virtualMachinesExtensionsApiVersion')]",
+                    "location": "[resourceGroup().location]",
+                    "condition": "[not(parameters('entraIdJoin'))]",
+                    "dependsOn": [
+                        "[variables('vmName')[copyIndex()]]",
+                        "Microsoft.PowerShell.DSC"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Compute",
+                        "type": "JsonADDomainExtension",
+                        "typeHandlerVersion": "1.3",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "name": "[parameters('domainFqdn')]",
+                            "ouPath": "[parameters('ouPath')]",
+                            "user": "[parameters('domainAccountUserPrincipalName')]",
+                            "restart": "true",
+                            "options": "3"
+                        },
+                        "protectedSettings": {
+                            "password": "[parameters('domainAccountPassword')]"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "vmTemplate": {
+            "type": "string",
+            "value": "[string(variables('vmTemplate'))]"
+        },
+        "vmName": {
+            "type": "array",
+            "value": "[variables('vmName')]"
+        }
+    }
+}

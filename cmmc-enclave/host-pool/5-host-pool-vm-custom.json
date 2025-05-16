@@ -19,25 +19,21 @@
         "hostPoolName": {
             "type": "string",
             "metadata": {
-                "description": "The name of the host pool to be created."
+                "description": "The name of the existing Azure Virtual Desktop host pool where the session host VMs will be deployed."
             }
         },
         "utcTime": {
             "type": "string",
-            "defaultValue": "[utcNow('u')]"
+            "defaultValue": "[utcNow('u')]",
+            "metadata": {
+                "description": "Auto-generated UTC timestamp for deployment. Do not modify."
+            }
         },
         "vmNumberOfInstances": {
             "type": "int",
             "metadata": {
                 "description": "Number of session hosts that will be created and added to the hostpool."
             }
-        },
-        "vmNamePrefix": {
-            "type": "string",
-            "metadata": {
-                "description": "This prefix will be used in combination with a for character random suffix to create the VM name."
-            },
-            "defaultValue": ""
         },
         "vmImageType": {
             "type": "string",
@@ -214,13 +210,7 @@
     "functions": [],
     "variables": {
         "customerShortName": "[if(parameters('isManagementHostPool'), 'shared', parameters('customerShortName'))]",
-        "requiredTags": {
-            "environment": "prod",
-            "application": "[if(parameters('isManagementHostPool'), 'shared', 'customer')]"
-        },
-        "nonManagementTag": {
-            "customer": "[variables('customerShortName')]"
-        },
+        "vmNamePrefix": "[if(parameters('isManagementHostPool'), 'mgmt-avd', concat(parameters('customerShortName'), '-avd'))]",
         "vmTemplate": [
             {
                 "domain": "[if(not(equals(parameters('domainFqdn'), '')), parameters('domainFqdn'), '')]",
@@ -229,7 +219,7 @@
                 "galleryImageSKU": "[if(and(equals(parameters('vmImageType'), 'Gallery'), not(empty(parameters('vmGalleryImageSKU')))), parameters('vmGalleryImageSKU'), json('null'))]",
                 "imageType": "[parameters('vmImageType')]",
                 "customImageId": "[if(equals(parameters('vmImageType'), 'CustomImage'), parameters('vmImageSourceId'), json('null'))]",
-                "namePrefix": "[parameters('vmNamePrefix')]",
+                "namePrefix": "[variables('vmNamePrefix')]",
                 "osDiskType": "[parameters('vmDiskType')]",
                 "vmSize":{
                     "id": "[parameters('vmSize')]",
@@ -257,7 +247,7 @@
             {
                 "name": "vmName",
                 "count": "[parameters('vmNumberOfInstances')]",
-                "input": "[concat(parameters('vmNamePrefix'), '-', toLower(take(uniqueString(guid(concat(deployment().name, copyIndex('vmName'))), parameters('utcTime')), 4)))]"
+                "input": "[concat(variables('vmNamePrefix'), '-', toLower(take(uniqueString(guid(concat(deployment().name, copyIndex('vmName'))), parameters('utcTime')), 4)))]"
             }
         ],
         "planInfoEmpty": "[or(empty(parameters('vmGalleryImageSKU')), empty(parameters('vmGalleryImagePublisher')), empty(parameters('vmGalleryImageOffer')))]",
@@ -296,7 +286,6 @@
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2022-11-01",
             "location": "[resourceGroup().location]",
-            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "copy": {
                 "name": "rdsh-nic-loop",
                 "count": "[parameters('vmNumberOfInstances')]"
@@ -321,7 +310,6 @@
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2023-07-01",
             "location": "[resourceGroup().location]",
-            "tags": "[if(parameters('isManagementHostPool'), variables('requiredTags'), union(variables('requiredTags'), variables('nonManagementTag')))]",
             "copy": {
                 "name": "rdsh-vm-loop",
                 "count": "[parameters('vmNumberOfInstances')]"
