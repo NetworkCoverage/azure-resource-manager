@@ -9,6 +9,13 @@
             },
             "defaultValue": false
         },
+        "customerShortName": {
+            "type": "string",
+            "metadata": {
+                "description": "(Required when isManagementHostPool = false) The abbreviated name of the customer"
+            },
+            "defaultValue": ""
+        },
         "hostPoolType": {
             "type": "string",
             "allowedValues": [
@@ -19,20 +26,6 @@
                 "description": "Specifies the host pool type: 'Pooled' for multi-session hosts or 'Personal' for single-session hosts. This value determines the image offer and SKU to be used."
             },
             "defaultValue": "Pooled"
-        },
-        "customerShortName": {
-            "type": "string",
-            "metadata": {
-                "description": "(Required when isManagementHostPool = false) The abbreviated name of the customer"
-            },
-            "defaultValue": ""
-        },
-        "utcTime": {
-            "type": "string",
-            "defaultValue": "[utcNow('u')]",
-            "metadata": {
-                "description": "Auto-generated UTC timestamp for deployment. Do not modify."
-            }
         },
         "vmNumberOfInstances": {
             "type": "int",
@@ -51,7 +44,6 @@
             },
             "defaultValue": "Windows-11"
         },
-        //az vm list-sizes --location usgovvirginia --query "[?name=='Standard_D2s_v3']" --output json | jq '[.[] | select(.memoryInMB != null) | {Name: .name, NumberOfCores: .numberOfCores, MemoryInGB: (.memoryInMB / 1024)}]'
         "vmSize": {
             "type": "string",
             "allowedValues": [
@@ -157,6 +149,25 @@
                 "description": "(Optional however only specified when entraIdJoin = false) Organizational Unit (OU) path where the machine will be placed when joined to the domain."
             },
             "defaultValue": ""
+        },
+        "fslogixStorageAccountName": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the existing Azure Storage Account that contains the FSLogix profile share."
+			}
+		},
+		"fslogixStorageAccountKey": {
+			"type": "securestring",
+			"metadata": {
+				"description": "The access key required to authenticate to the specified FSLogix storage account."
+			}
+		},
+        "utcTime": {
+            "type": "string",
+            "defaultValue": "[utcNow('u')]",
+            "metadata": {
+                "description": "Auto-generated UTC timestamp for deployment. Do not modify."
+            }
         }
     },
     "variables": {
@@ -164,10 +175,14 @@
         "networkInterfacesApiVersion": "2024-05-01",
         "virtualMachinesApiVersion": "2024-11-01",
         "virtualMachinesExtensionsApiVersion": "2024-11-01",
+        "runCommandsApiVersion": "2024-11-01",
         "hostPoolName": "[if(parameters('isManagementHostPool'), concat('mgmt-', resourceGroup().location, '-vdpool-1'), concat(parameters('customerShortName'), '-', resourceGroup().location, '-vdpool-1'))]",
+        "isPooledHostPool": "[equals(parameters('hostPoolType'), 'Pooled')]",
+        "fslogixFileShareName": "fslogixprofiles",
+        "runCommandSourceUri": "https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/main/cmmc-enclave/virtual-machine/multi-session/scripts/Register-FsLogixStartupProfile.ps1",
         "vmNamePrefix": "[if(parameters('isManagementHostPool'), 'mgmt-avd', concat(parameters('customerShortName'), '-avd'))]",
         "vmImageType": "Gallery",
-        "vmGalleryImageOffer": "[if(not(equals(parameters('hostPoolType'), 'Pooled')), if(equals(parameters('vmOperatingSystemVersion'), 'Windows-11'), 'windows-11', 'Windows-10'), 'office-365')]",
+        "vmGalleryImageOffer": "[if(not(variables('isPooledHostPool')), if(equals(parameters('vmOperatingSystemVersion'), 'Windows-11'), 'windows-11', 'Windows-10'), 'office-365')]",
         "vmGalleryImagePublisher":"MicrosoftWindowsDesktop",
         "vmGalleryImageSKU": "[if(equals(variables('vmGalleryImageOffer'), 'office-365'), if(equals(parameters('vmOperatingSystemVersion'), 'Windows-11'), 'win11-24h2-avd-m365', 'win10-22h2-avd-m365-g2'), if(equals(variables('vmGalleryImageOffer'), 'windows-11'), 'win11-24h2-ent', if(equals(variables('vmGalleryImageOffer'), 'Windows-10'), 'win10-22h2-ent', 'win11-24h2-avd-m365')))]",
         "vmSkuMap": {
@@ -400,6 +415,43 @@
                         "protectedSettings": {
                             "password": "[parameters('domainAccountPassword')]"
                         }
+                    }
+                },
+                // fslogix run command
+                {
+                    "name": "fslogixRunCommand",
+					"type": "runCommands",
+					"apiVersion": "[variables('runCommandsApiVersion')]",
+                    "location": "[resourceGroup().location]",
+                    "condition": "[variables('isPooledHostPool')]",
+                    "dependsOn": [
+                        "[variables('vmName')[copyIndex()]]",
+                        "Microsoft.PowerShell.DSC",
+                        "[if(parameters('entraIdJoin'), 'AADLoginForWindows', 'joindomain')]"
+                    ],
+                    "properties": {
+                        "asyncExecution": false,
+                        "parameters": [
+                            {
+                                "name": "StorageAccount",
+                                "value": "[parameters('fslogixStorageAccountName')]"
+                            },
+                            {
+                                "name": "Share",
+                                "value": "[variables('fslogixFileShareName')]"
+                            }
+                        ],
+                        "protectedParameters": [
+                            {
+                                "name": "Secret",
+                                "value": "[parameters('fslogixStorageAccountKey')]"
+                            }
+                        ],
+						"source": {
+							"scriptUri": "[variables('runCommandSourceUri')]"
+						},
+						"timeoutInSeconds": 300,
+						"treatFailureAsDeploymentFailure": false
                     }
                 }
             ]

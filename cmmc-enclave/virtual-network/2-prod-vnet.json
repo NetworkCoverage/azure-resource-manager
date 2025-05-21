@@ -101,11 +101,16 @@
                             "name": "[variables('subnetNameCopy')[copyIndex('subnets')]]",
                             "properties": {
                                 "addressPrefix": "[cidrSubnet(parameters('vnetAddressSpace'), 24, copyIndex('subnets'))]",
+                                "privateEndpointNetworkPolicies": "Disabled",
+                                "privateLinkServiceNetworkPolicies": "Enabled",
+                                "serviceEndpoints": [
+                                    {
+                                        "service": "Microsoft.Storage"
+                                    }
+                                ],
                                 "routeTable": {
                                     "id": "[resourceId(parameters('managementResourceGroupName'),'Microsoft.Network/routeTables', parameters('managementRouteTableName'))]"
-                                },
-                                "privateEndpointNetworkPolicies": "Disabled",
-                                "privateLinkServiceNetworkPolicies": "Enabled"
+                                }
                             }
                         }
                     }

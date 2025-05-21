@@ -1,0 +1,273 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "isManagementStorageAccount": {
+            "type": "bool",
+            "metadata": {
+                "description": "Indicates whether the storage account is designated for management purposes. Set to true if intended for administrative use, otherwise false."
+            },
+            "defaultValue": false
+        },
+        "customerShortName": {
+            "type": "string",
+            "metadata": {
+                "description": "(Required when isManagementStorageAccount = false) The abbreviated name of the customer"
+            },
+            "defaultValue": ""
+        },
+        "allowedVnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the virtual network that will be granted access to the Azure Storage Account."
+            }
+        },
+        "subnetInAllowedVnetName": {
+            "type": "string",
+            "metadata": {
+                "description" : "The name(s) of the specific subnets within the selected virtual network that will be granted access to the Azure Storage Account. Separate multiple subnets with commas."
+            }
+        },        
+        "fileShareQuota": {
+            "type": "int",
+            "metadata": {
+                "description": "The provisioned size of the share, in gibibytes. Must be greater than 0, and less than or equal to 5TB (5120). For Large File Shares, the maximum size is 102400."
+            },
+            "defaultValue": 512
+        },
+        
+        "baseTime": {
+            "type": "string",
+            "defaultValue": "[utcNow('s')]"
+        }
+    },
+    "variables": {
+        "regionAbbreviationMap": {
+            "eastus": "eus",
+            "eastus2": "eus2",
+            "centralus": "cus",
+            "northcentralus": "ncus",
+            "southcentralus": "scus",
+            "westus": "wus",
+            "westus2": "wus2",
+            "westus3": "wus3",
+            "westcentralus": "wcus",
+            "canadacentral": "cac",
+            "canadaeast": "cae",
+            "usgovvirginia": "ugv",
+            "usgovarizona": "uga",
+            "usgovtexas": "ugt",
+            "usgoviowa": "ugi",
+            "usdodcentral": "udc",
+            "usdodeast": "ude",
+            "usnateast": "une",
+            "usnatwest": "unw",
+            "usseceast": "use",
+            "ussecwest": "usw",
+            "ussecwestcentral": "uswc"
+        },
+        "storageAccountName": "[if(parameters('isManagementStorageAccount'), concat(parameters('customerShortName'),'mgmt', variables('regionAbbreviationMap')[resourceGroup().location], 'fslogixst'), concat(parameters('customerShortName'), variables('regionAbbreviationMap')[resourceGroup().location], 'st'))]",
+        "storageAccountKind": "FileStorage",
+        "storageAccountType": "Premium_LRS",
+        "publicNetworkAccess": "Enabled",
+        "fileShareName": "fslogixprofiles",
+        "vaultName": "[if(parameters('isManagementStorageAccount'), concat('mgmt-', resourceGroup().location, '-rsv-1'), concat(parameters('customerShortName'), resourceGroup().location, 'rsv-1'))]",
+        "policyName": "AzureFileShareDefaultPolicy",
+        "copy": [
+			{
+				"name": "subnetInAllowedVnetName",
+				"count": "[length(split(parameters('subnetInAllowedVnetName'), ','))]",
+				"input": "[trim(split(parameters('subnetInAllowedVnetName'), ',')[copyIndex('subnetInAllowedVnetName')])]"
+			}
+		]
+    },
+    "resources": [
+        {
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-05-01",
+            "tags": {
+                "displayName": "[variables('storageAccountName')]"
+            },
+            "location": "[resourceGroup().location]",
+            "kind": "[variables('storageAccountKind')]",
+            "properties": {
+                "encryption": {
+                    "keySource": "Microsoft.Storage",
+                    "services": {
+                        "blob": {
+                            "enabled": true
+                        },
+                        "file": {
+                            "enabled": true
+                        },
+                        "table": {
+                            "enabled": true
+                        },
+                        "queue": {
+                            "enabled": true
+                        }
+                    },
+                    "requireInfrastructureEncryption": true
+                },
+                "largeFileSharesState": "Enabled",
+                "minimumTlsVersion": "TLS1_2",
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "defaultAction": "Deny",
+                    "ipRules": [],
+                    "copy": [
+                        {
+                            "name": "virtualNetworkRules",
+                            "count": "[length(variables('subnetInAllowedVnetName'))]",
+                            "input": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('allowedVnetName'), variables('subnetInAllowedVnetName')[copyIndex('virtualNetworkRules')])]"
+                            }
+                        }
+                    ]
+                },
+                "publicNetworkAccess": "[variables('publicNetworkAccess')]"
+            },
+            "sku": {
+                "name": "[variables('storageAccountType')]"
+            }
+        },
+        {
+            "name": "[concat(variables('storageAccountName'), '/default')]",
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2023-05-01",
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                }
+            },
+            "dependsOn": [
+                "[variables('storageAccountName')]"
+            ]
+        },
+        {
+            "name": "[concat(variables('storageAccountName'), '/default/', variables('fileShareName'))]",
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",  
+            "apiVersion": "2023-05-01",
+            "properties": {
+                "accessTier": "Premium",
+                "enabledProtocols": "SMB",
+                "shareQuota": "[parameters('fileShareQuota')]"
+            },
+            "dependsOn": [
+                "[variables('storageAccountName')]"
+            ]
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults",
+            "apiVersion": "2020-02-02",
+            "name": "[variables('vaultName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+            },
+            "properties": {},
+            "resources": [
+                {
+                    "type": "backupPolicies",
+                    "apiVersion": "2024-10-01",
+                    "name": "[variables('policyName')]",
+                    "properties": {
+                        "backupManagementType": "AzureStorage",
+                        "workloadType": "AzureFileShare",
+                        "schedulePolicy": {
+                            "schedulePolicyType": "SimpleSchedulePolicy",
+                            "scheduleRunFrequency": "Daily",
+                            "scheduleRunTimes": [
+                                "[format('{0}T22:00:00.000Z', split(parameters('baseTime'), 'T')[0])]"
+                            ]
+                        },
+                        "timeZone": "Eastern Standard Time",
+                        "retentionPolicy": {
+                            "retentionPolicyType": "LongTermRetentionPolicy",
+                            "dailySchedule": {
+                                "retentionTimes": [
+                                    "[format('{0}T22:00:00.000Z', split(parameters('baseTime'), 'T')[0])]"
+                                ],
+                                "retentionDuration": {
+                                    "count": 14,
+                                    "durationType": "Days"
+                                }
+                            },
+                            "weeklySchedule": {
+                                "daysOfTheWeek": [
+                                    "Sunday"
+                                ],
+                                "retentionTimes": [
+                                    "[format('{0}T22:00:00.000Z', split(parameters('baseTime'), 'T')[0])]"
+                                ],
+                                "retentionDuration": {
+                                    "count": 4,
+                                    "durationType": "Weeks"
+                                }
+                            },
+                            "monthlySchedule": {
+                                "retentionScheduleFormatType": "Weekly",
+                                "retentionScheduleWeekly": {
+                                    "daysOfTheWeek": [
+                                        "Sunday"
+                                    ],
+                                    "weeksOfTheMonth": [
+                                        "First"
+                                    ]
+                                },
+                                "retentionTimes": [
+                                    "[format('{0}T22:00:00.000Z', split(parameters('baseTime'), 'T')[0])]"
+                                ],
+                                "retentionDuration": {
+                                    "count": 6,
+                                    "durationType": "Months"
+                                }
+                            }
+                        },
+                        "protectedItemsCount": 0
+                    },
+                    "dependsOn": [
+                        "[variables('vaultName')]"
+                    ]
+                },
+                {
+                    "type": "backupFabrics/protectionContainers",
+                    "apiVersion": "2024-10-01",
+                    "name": "[format('{0}/storagecontainer;Storage;{1};{2}', 'Azure', resourceGroup().name, variables('storageAccountName'))]",
+                    "properties": {
+                        "backupManagementType": "AzureStorage",
+                        "containerType": "StorageContainer",
+                        "sourceResourceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+                    },
+                    "dependsOn": [
+                        "[variables('vaultName')]"
+                    ]
+                },
+                {
+                    "type": "backupFabrics/protectionContainers/protectedItems",
+                    "apiVersion": "2024-10-01",
+                    "name": "[format('{0}/storagecontainer;Storage;{1};{2}/AzureFileShare;{3}', 'Azure', resourceGroup().name, variables('storageAccountName'), variables('fileShareName'))]",
+                    "properties": {
+                        "protectedItemType": "AzureFileShareProtectedItem",
+                        "sourceResourceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+                        "policyId": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', variables('vaultName'), variables('policyName'))]",
+                        "isInlineInquiry": true
+                    },
+                    "dependsOn": [
+                        "[resourceId('Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers', variables('vaultName'), 'Azure', format('storagecontainer;Storage;{0};{1}', resourceGroup().name, variables('storageAccountName')))]",
+                        "[variables('policyName')]",
+                        "[variables('vaultName')]"
+                    ]
+                }
+            ],
+            "dependsOn": [
+                "[variables('storageAccountName')]"
+            ]
+        }
+        
+    ],
+    "outputs": {}
+}
