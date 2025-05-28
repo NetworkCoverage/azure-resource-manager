@@ -12,7 +12,7 @@
         "customerShortName": {
             "type": "string",
             "metadata": {
-                "description": "(Required when isManagementStorageAccount = false) The abbreviated name of the customer"
+                "description": "The abbreviated name of the customer"
             },
             "defaultValue": ""
         },
@@ -27,7 +27,7 @@
             "metadata": {
                 "description" : "The name(s) of the specific subnets within the selected virtual network that will be granted access to the Azure Storage Account. Separate multiple subnets with commas."
             }
-        },        
+        },
         "fileShareQuota": {
             "type": "int",
             "metadata": {
@@ -42,6 +42,17 @@
         }
     },
     "variables": {
+        "storageAccountApiVersion": "2024-01-01",
+        "fileservicesApiVersion": "2024-01-01",
+        "fileShareApiVersion": "2024-01-01",
+        "vaultApiVersion": "2025-02-01",
+        "vaultBackupPolicyApiVersion": "2025-02-28-preview",
+        "vaultProtectionContainerApiVersion": "2025-02-28-preview",
+        "vaultProtectedItemApiVersion": "2025-02-28-preview",
+        "storageAccountName": "[if(parameters('isManagementStorageAccount'), concat(parameters('customerShortName'),'mgmt', variables('regionAbbreviationMap')[resourceGroup().location], 'fslogixst'), concat(parameters('customerShortName'), variables('regionAbbreviationMap')[resourceGroup().location], 'fslogixst'))]",
+        "fileShareName": "fslogixprofiles",
+        "vaultName": "[if(parameters('isManagementStorageAccount'), concat('mgmt-', resourceGroup().location, '-rsv-1'), concat(parameters('customerShortName'), resourceGroup().location, 'rsv-1'))]",
+        "policyName": "AzureFileShareDefaultPolicy",
         "regionAbbreviationMap": {
             "eastus": "eus",
             "eastus2": "eus2",
@@ -66,13 +77,6 @@
             "ussecwest": "usw",
             "ussecwestcentral": "uswc"
         },
-        "storageAccountName": "[if(parameters('isManagementStorageAccount'), concat(parameters('customerShortName'),'mgmt', variables('regionAbbreviationMap')[resourceGroup().location], 'fslogixst'), concat(parameters('customerShortName'), variables('regionAbbreviationMap')[resourceGroup().location], 'st'))]",
-        "storageAccountKind": "FileStorage",
-        "storageAccountType": "Premium_LRS",
-        "publicNetworkAccess": "Enabled",
-        "fileShareName": "fslogixprofiles",
-        "vaultName": "[if(parameters('isManagementStorageAccount'), concat('mgmt-', resourceGroup().location, '-rsv-1'), concat(parameters('customerShortName'), resourceGroup().location, 'rsv-1'))]",
-        "policyName": "AzureFileShareDefaultPolicy",
         "copy": [
 			{
 				"name": "subnetInAllowedVnetName",
@@ -85,12 +89,12 @@
         {
             "name": "[variables('storageAccountName')]",
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2023-05-01",
+            "apiVersion": "[variables('storageAccountApiVersion')]",
             "tags": {
                 "displayName": "[variables('storageAccountName')]"
             },
             "location": "[resourceGroup().location]",
-            "kind": "[variables('storageAccountKind')]",
+            "kind": "FileStorage",
             "properties": {
                 "encryption": {
                     "keySource": "Microsoft.Storage",
@@ -126,16 +130,16 @@
                         }
                     ]
                 },
-                "publicNetworkAccess": "[variables('publicNetworkAccess')]"
+                "publicNetworkAccess": "Enabled"
             },
             "sku": {
-                "name": "[variables('storageAccountType')]"
+                "name": "Premium_LRS"
             }
         },
         {
             "name": "[concat(variables('storageAccountName'), '/default')]",
             "type": "Microsoft.Storage/storageAccounts/fileservices",
-            "apiVersion": "2023-05-01",
+            "apiVersion": "[variables('fileservicesApiVersion')]",
             "properties": {
                 "shareDeleteRetentionPolicy": {
                     "enabled": true,
@@ -149,7 +153,7 @@
         {
             "name": "[concat(variables('storageAccountName'), '/default/', variables('fileShareName'))]",
             "type": "Microsoft.Storage/storageAccounts/fileServices/shares",  
-            "apiVersion": "2023-05-01",
+            "apiVersion": "[variables('fileShareApiVersion')]",
             "properties": {
                 "accessTier": "Premium",
                 "enabledProtocols": "SMB",
@@ -161,18 +165,29 @@
         },
         {
             "type": "Microsoft.RecoveryServices/vaults",
-            "apiVersion": "2020-02-02",
+            "apiVersion": "[variables('vaultApiVersion')]",
             "name": "[variables('vaultName')]",
             "location": "[resourceGroup().location]",
             "sku": {
                 "name": "RS0",
                 "tier": "Standard"
             },
-            "properties": {},
+            "properties": {
+                "publicNetworkAccess": "Enabled",
+                "securitySettings": {
+                    "immutabilitySettings": {
+                        "state": "Disabled"
+                    }
+                },
+                "redundancySettings": {
+                    "standardTierStorageRedundancy": "LocallyRedundant",
+                    "crossRegionRestore": "Disabled"
+                }
+            },
             "resources": [
                 {
                     "type": "backupPolicies",
-                    "apiVersion": "2024-10-01",
+                    "apiVersion": "[variables('vaultBackupPolicyApiVersion')]",
                     "name": "[variables('policyName')]",
                     "properties": {
                         "backupManagementType": "AzureStorage",
@@ -235,7 +250,7 @@
                 },
                 {
                     "type": "backupFabrics/protectionContainers",
-                    "apiVersion": "2024-10-01",
+                    "apiVersion": "[variables('vaultProtectionContainerApiVersion')]",
                     "name": "[format('{0}/storagecontainer;Storage;{1};{2}', 'Azure', resourceGroup().name, variables('storageAccountName'))]",
                     "properties": {
                         "backupManagementType": "AzureStorage",
@@ -248,7 +263,7 @@
                 },
                 {
                     "type": "backupFabrics/protectionContainers/protectedItems",
-                    "apiVersion": "2024-10-01",
+                    "apiVersion": "[variables('vaultProtectedItemApiVersion')]",
                     "name": "[format('{0}/storagecontainer;Storage;{1};{2}/AzureFileShare;{3}', 'Azure', resourceGroup().name, variables('storageAccountName'), variables('fileShareName'))]",
                     "properties": {
                         "protectedItemType": "AzureFileShareProtectedItem",

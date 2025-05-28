@@ -1,12 +1,32 @@
 param (
-    [System.String] $CompanyName,
+    [Parameter(Mandatory = $true)]
+    [System.String]$ResourceGroupName,
+
+    [Parameter(Mandatory = $true)]
     [System.String] $HostPoolName,
+
+    [Parameter(Mandatory = $true)]
     [System.String] $HostPoolFriendlyName,
-    [System.String] $ResourceGroupName
+
+    [Parameter(ParameterSetName = "Customer", Mandatory = $true)]
+    [System.String]$CustomerName,
+
+    [Parameter(ParameterSetName = "Customer")]
+    [System.Management.Automation.SwitchParameter]$IsCustomerResourceGroup
 )
 
-Connect-AzAccount -Environment AzureUSGovernment
-Connect-MgGraph -Scopes "Group.ReadWrite.All" -Environment USGov
+# Ensure proper Graph scopes are present
+$RequiredScopes = @("Group.ReadWrite.All")
+try {$Context = Get-MgContext} catch {$Context = $null}
+$ExistingScopes = if ($Context) {$Context.Scopes} else {@()}
+if (-not $Context -or ($RequiredScopes | Where-Object {$_ -notin $ExistingScopes})) {
+    $Scopes = $ExistingScopes + $RequiredScopes | Select-Object -Unique
+    Connect-MgGraph -NoWelcome -Scopes $Scopes -Environment 'USGov'
+}
+
+Write-Host "Connecting to Azure for RBAC..."
+Connect-AzAccount -Environment AzureUSGovernment -UseDeviceAuthentication
+
 
 # Add the "Desktop Virtualization Power On Off Contributor" role to the resource group allowing the automatic startup and shutdown of AVDs
 $parameters = @{
@@ -16,36 +36,12 @@ $parameters = @{
 }
 New-AzRoleAssignment @parameters
 
-# If one does not exist create a group for non adminstrative users and assign the 'Virtual Machine User Login' role to the group
-$NonAdminGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:Virtual Machine User Login"'
-if ($null -eq $NonAdminGroup) {
-    $parameters = @{
-        DisplayName = 'Virtual Machine User Login'
-        MailEnabled = $False 
-        MailNickName = (New-Guid).ToString().Substring(0,10)
-        SecurityEnabled = $true
-        Description = 'Members of this group will be assigned the Virtual Machine User Login role. This role enables authentication to Azure AD joined VMs'
-        MembershipRule = ("(user.companyName -eq `"{0}`") and (user.accountEnabled -eq true)" -f $CompanyName)
-        MembershipRuleProcessingState = 'On'
-        GroupTypes = 'DynamicMembership'
-    }
-    $NonAdminGroup = New-MgGroup @parameters
-    Start-Sleep -Seconds 180 # give time for azure to propagate the new group
-}
-$parameters = @{
-    ObjectId = $NonAdminGroup.Id
-    RoleDefinitionName = 'Virtual Machine User Login'
-    ResourceGroupName = $ResourceGroupName
-}
-New-AzRoleAssignment @parameters 
-
-
 # If one does not exist create a group for administrative users and assign the 'Virtual Machine Administrator Login' role to the group
 $AdminGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:Virtual Machine Administrator Login"'
 if ($null -eq $AdminGroup) {
     $parameters = @{
         DisplayName = 'Virtual Machine Administrator Login'
-        MailEnabled = $False 
+        MailEnabled = $false 
         MailNickName = (New-Guid).ToString().Substring(0,10)
         SecurityEnabled = $true
         Description = 'Members of this group will be assigned the Virtual Machine Administrator Login role. This role enables user to view Virtual Machines in the portal and login as administrator'
@@ -64,13 +60,42 @@ $parameters = @{
 }
 New-AzRoleAssignment @parameters 
 
+
+if ($IsCustomerResourceGroup) {    
+    # If one does not exist create a group for non adminstrative users and assign the 'Virtual Machine User Login' role to the group
+    $NonAdminGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:Virtual Machine User Login"'
+    if ($null -eq $NonAdminGroup) {
+        $parameters = @{
+            DisplayName = 'Virtual Machine User Login'
+            MailEnabled = $false 
+            MailNickName = (New-Guid).ToString().Substring(0,10)
+            SecurityEnabled = $true
+            Description = 'Members of this group will be assigned the Virtual Machine User Login role. This role enables authentication to Azure AD joined VMs'
+            MembershipRule = ("(user.companyName -eq `"{0}`") and (user.accountEnabled -eq true)" -f $CompanyName)
+            MembershipRuleProcessingState = 'On'
+            GroupTypes = 'DynamicMembership'
+        }
+        $NonAdminGroup = New-MgGroup @parameters
+        Start-Sleep -Seconds 180 # give time for azure to propagate the new group
+    }
+    $parameters = @{
+        ObjectId = $NonAdminGroup.Id
+        RoleDefinitionName = 'Virtual Machine User Login'
+        ResourceGroupName = $ResourceGroupName
+    }
+    New-AzRoleAssignment @parameters 
+}
+
 # Create a groups of users to assign to the AVD application
 $parameters = @{
     DisplayName = ('{0} Users' -f $HostPoolFriendlyName)
-    MailEnabled = $False 
+    MailEnabled = $false 
     MailNickName = (New-Guid).ToString().Substring(0,10)
     SecurityEnabled = $true
     Description = ('Members of this group are assigned to the desktop application group for {0}' -f $HostPoolFriendlyName)
+    MembershipRule = if ($IsCustomerResourceGroup) {("(user.companyName -eq `"{0}`") and (user.accountEnabled -eq true)" -f $CompanyName)} else {"(user.companyName -eq `"Network Coverage`") and (user.accountEnabled -eq true)"}
+    MembershipRuleProcessingState = 'On'
+    GroupTypes = 'DynamicMembership'
 }
 $Group = New-MgGroup @parameters
 

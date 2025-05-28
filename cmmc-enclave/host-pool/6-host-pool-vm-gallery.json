@@ -179,7 +179,7 @@
         "hostPoolName": "[if(parameters('isManagementHostPool'), concat('mgmt-', resourceGroup().location, '-vdpool-1'), concat(parameters('customerShortName'), '-', resourceGroup().location, '-vdpool-1'))]",
         "isPooledHostPool": "[equals(parameters('hostPoolType'), 'Pooled')]",
         "fslogixFileShareName": "fslogixprofiles",
-        "runCommandSourceUri": "https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/main/cmmc-enclave/virtual-machine/multi-session/scripts/Register-FsLogixStartupProfile.ps1",
+        "runCommandSourceUri": "https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/main/cmmc-enclave/virtual-machine/multi-session/scripts/Register-FsLogixStartupScript.ps1",
         "vmNamePrefix": "[if(parameters('isManagementHostPool'), 'mgmt-avd', concat(parameters('customerShortName'), '-avd'))]",
         "vmImageType": "Gallery",
         "vmGalleryImageOffer": "[if(not(variables('isPooledHostPool')), if(equals(parameters('vmOperatingSystemVersion'), 'Windows-11'), 'windows-11', 'Windows-10'), 'office-365')]",
