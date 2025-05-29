@@ -3,17 +3,25 @@ param (
     [System.String]$ResourceGroupName,
 
     [Parameter(Mandatory = $true)]
-    [System.String] $HostPoolName,
+    [System.String] $ApplicationGroupName,
 
     [Parameter(Mandatory = $true)]
     [System.String] $HostPoolFriendlyName,
 
-    [Parameter(ParameterSetName = "Customer", Mandatory = $true)]
+    [Parameter()]
     [System.String]$CustomerName,
 
-    [Parameter(ParameterSetName = "Customer")]
+    [Parameter()]
     [System.Management.Automation.SwitchParameter]$IsCustomerResourceGroup
 )
+
+'Microsoft.Graph.Groups' | ForEach-Object {
+    if (-not (Get-Module -ListAvailable -Name $_)) {
+        Write-Host ('Installing missing module: {0}...' -f $_)
+        Install-Module -Name $_ -Scope CurrentUser -Force
+    }
+    Import-Module $_ -Force
+}
 
 # Ensure proper Graph scopes are present
 $RequiredScopes = @("Group.ReadWrite.All")
@@ -26,14 +34,14 @@ if (-not $Context -or ($RequiredScopes | Where-Object {$_ -notin $ExistingScopes
 
 Write-Host "Connecting to Azure for RBAC..."
 Connect-AzAccount -Environment AzureUSGovernment -UseDeviceAuthentication
-
-
+ 
 # Add the "Desktop Virtualization Power On Off Contributor" role to the resource group allowing the automatic startup and shutdown of AVDs
 $parameters = @{
     RoleDefinitionName = 'Desktop Virtualization Power On Off Contributor'
     ApplicationId = "9cdead84-a844-4324-93f2-b2e6bb768d07"
     ResourceGroupName = $ResourceGroupName
 }
+Write-Host "Assigning the 'Desktop Virtualization Power On Off Contributor' role to the resource group $ResourceGroupName"
 New-AzRoleAssignment @parameters
 
 # If one does not exist create a group for administrative users and assign the 'Virtual Machine Administrator Login' role to the group
@@ -49,8 +57,8 @@ if ($null -eq $AdminGroup) {
         MembershipRuleProcessingState = 'On'
         GroupTypes = 'DynamicMembership'
     }
+    Write-Host "Creating the 'Virtual Machine Administrator Login' group..."
     $AdminGroup = New-MgGroup @parameters
-    
     Start-Sleep -Seconds 180 # give time for azure to propagate the new group    
 }
 $parameters = @{
@@ -58,6 +66,7 @@ $parameters = @{
     RoleDefinitionName = 'Virtual Machine Administrator Login'
     ResourceGroupName = $ResourceGroupName
 }
+Write-Host "Assigning the 'Virtual Machine Administrator Login' role to the 'Virtual Machine Administrator Login' group..."
 New-AzRoleAssignment @parameters 
 
 
@@ -75,6 +84,7 @@ if ($IsCustomerResourceGroup) {
             MembershipRuleProcessingState = 'On'
             GroupTypes = 'DynamicMembership'
         }
+        write-host "Creating the 'Virtual Machine User Login' group..."
         $NonAdminGroup = New-MgGroup @parameters
         Start-Sleep -Seconds 180 # give time for azure to propagate the new group
     }
@@ -83,6 +93,7 @@ if ($IsCustomerResourceGroup) {
         RoleDefinitionName = 'Virtual Machine User Login'
         ResourceGroupName = $ResourceGroupName
     }
+    Write-Host "Assigning the 'Virtual Machine User Login' role to the 'Virtual Machine User Login' group..."
     New-AzRoleAssignment @parameters 
 }
 
@@ -97,6 +108,7 @@ $parameters = @{
     MembershipRuleProcessingState = 'On'
     GroupTypes = 'DynamicMembership'
 }
+Write-Host ("Creating the '{0} Users' group..." -f $HostPoolFriendlyName)
 $Group = New-MgGroup @parameters
 
 Start-Sleep -Seconds 180 # give time for azure to propgate the new group
@@ -104,12 +116,12 @@ Start-Sleep -Seconds 180 # give time for azure to propgate the new group
 # Assign groups to the host pool desktop application group
 $parameters = @{
     ObjectId = $Group.Id
-    ResourceName = $HostPoolName
+    ResourceName = $ApplicationGroupName
     ResourceGroupName = $ResourceGroupName
     RoleDefinitionName = 'Desktop Virtualization User'
     ResourceType = 'Microsoft.DesktopVirtualization/applicationGroups'
 }
-
+write-host ("Assigning the 'Desktop Virtualization User' role to the '{0} Users' group..." -f $HostPoolFriendlyName)
 New-AzRoleAssignment @parameters
 
 <# 
