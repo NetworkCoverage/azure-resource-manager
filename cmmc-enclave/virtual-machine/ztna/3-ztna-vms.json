@@ -13,7 +13,21 @@
             "metadata": {
                 "description": "Specifies the version of the Appgate SDP virtual machine to be deployed."
             },
-            "defaultValue": "v6_3a_vm"
+            "defaultValue": "v6_3a_vm",
+            "allowedValues": [
+                "v5_1_vm",
+                "v5_2_vm",
+                "v5_3_vm",
+                "v5_4_vm",
+                "v5_5_vm",
+                "v6_0_vm",
+                "v6_1_vm",
+                "v6_2_vm",
+                "v6_3a_vm",
+                "v6_3_vm",
+                "v6_4_vm",
+                "v6_5_vm"
+            ]
         },
         "fwPublicIpNames": {
             "type": "String",
@@ -57,7 +71,7 @@
                 "count": "[length(split(parameters('fwPublicIpNames'), ','))]",
                 "input": "[trim(split(parameters('fwPublicIpNames'), ',')[copyIndex('fwPublicIpNames')])]"
             },
-             {
+            {
                 "name": "sourceAddress",
                 "count": "[length(split(parameters('sourceAddress'), ','))]",
                 "input": "[trim(split(parameters('sourceAddress'), ',')[copyIndex('sourceAddress')])]"

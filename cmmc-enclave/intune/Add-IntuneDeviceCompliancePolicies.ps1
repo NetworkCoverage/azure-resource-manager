@@ -509,7 +509,8 @@ Connect-MgGraph -Scopes "Group.ReadWrite.All" -Environment USGov
     - Configure OneDrive settings
     - Configure Windows NTP client
     - Enable interactive logon banner
-    - Enable interactive logon banner
+    - Enable screen capture 
+   Group for Enable Bitlocker endpoint protection intune device configuration profile    
 #>
 $AvdHostGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:All Azure Virtual Desktop Hosts"'
 if ($null -eq $AvdHostGroup) {
@@ -524,6 +525,25 @@ if ($null -eq $AvdHostGroup) {
         GroupTypes = 'DynamicMembership'
     }
     $AvdHostGroup = New-MgGroup @parameters
+}
+<# Group for the following settings catalog intune device configuration profiles
+   - Disable password reveal
+   - Enable Azure Information Protection add-in for sensitivity labeling
+   Group for Set lock screen inactivity timer endpoint protection intune device configuration profile
+#>
+$AllUsersGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:All Users"'
+if ($null -eq $AllUsersGroup) {
+    $parameters = @{
+        DisplayName = 'All Users'
+        MailEnabled = $False 
+        MailNickName = (New-Guid).ToString().Substring(0,10)
+        SecurityEnabled = $true
+        Description = 'This group is for all users'
+        MembershipRule = "(user.accountEnabled -eq True)"
+        MembershipRuleProcessingState = 'On'
+        GroupTypes = 'DynamicMembership'
+    }
+    $AllUsersGroup = New-MgGroup @parameters
 }
 
 # Group for all Window 10 and later devices

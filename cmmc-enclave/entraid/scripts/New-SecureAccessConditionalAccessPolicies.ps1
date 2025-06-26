@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter()]
     [string[]]$ExcludedUserIds,
 
     [Parameter(Mandatory = $true)]
@@ -21,12 +21,9 @@ param(
     [string[]]$SecureEnclaveIp
 )
 
-'Microsoft.Graph.Identity.SignIns'  | ForEach-Object {
-    if (-not (Get-Module -ListAvailable -Name $_)) {
-        Write-Host ('Installing missing module: {0}...' -f $_)
-        Install-Module -Name $_ -Scope CurrentUser -Force
-    }
-    Import-Module $_ -Force
+'Microsoft.Graph.Users', 'Microsoft.Graph.Identity.SignIns' | ForEach-Object {
+    Write-Host ('Installing module: {0}...' -f $_)
+    Install-Module -Name $_ -Force -AllowClobber   
 }
 
 # Ensure proper Graph scopes are present
@@ -59,7 +56,13 @@ if (-not ($ExistingLocations.DisplayName -contains "Secure Enclave")) {
             }
         )
     }        
-    try {$SecureEnclaveLocation = New-MgIdentityConditionalAccessNamedLocation -BodyParameter $Params  -ErrorAction Stop} catch {throw "Failed to create Secure Enclave location: $_"}
+    try {
+        $SecureEnclaveLocation = New-MgIdentityConditionalAccessNamedLocation -BodyParameter $Params  -ErrorAction Stop
+        Start-Sleep -Seconds 180 # give time for Azure to propagate the new location
+    } 
+    catch {
+        throw "Failed to create Secure Enclave location: $_"
+    }
 }
 
 $PolicyTemplates = @(
@@ -141,10 +144,6 @@ $PolicyTemplates = @(
             Operator = "OR"
         }
         SessionControls = @{
-            PersistentBrowser = @{
-                IsEnabled = $true
-                Mode = "never"
-            }
             SignInFrequency = @{
                 AuthenticationType = "primaryAndSecondaryAuthentication"
                 FrequencyInterval = "timeBased"
@@ -158,7 +157,7 @@ $PolicyTemplates = @(
 
 $Policy = @()
 foreach ($Template in $PolicyTemplates) {
-    $Existing = Get-MgConditionalAccessPolicy -All | Where-Object {$_.DisplayName -eq $Template.DisplayName}
+    $Existing = Get-MgIdentityConditionalAccessPolicy -All | Where-Object {$_.DisplayName -eq $Template.DisplayName}
     if (-not $Existing) {
         Write-Host ('Creating Conditional Access Policy: {0}' -f $Template.DisplayName)
         $Policy += New-MgIdentityConditionalAccessPolicy @Template
