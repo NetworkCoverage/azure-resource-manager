@@ -1,740 +1,20 @@
 param (
     [Parameter(Mandatory = $false)]
-    [System.Management.Automation.SwitchParameter] $GpuVms,
+    [System.Management.Automation.SwitchParameter] $GpuVms = $false,
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("v1.0", "Beta")]
     [System.String]$ApiVersion = "Beta",
 
     [Parameter(Mandatory = $true)]
-    [System.String]$TenantId
+    [System.String]$TenantId,
+
+    [Parameter(Mandatory = $true)]
+    [System.String]$CustomerName
 )
 
-$SettingsCatalogPolicies = @(
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 7
-        name = "Configure device and resource redirection"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = ""
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type" = "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId  = "device_vendor_msft_policy_config_admx_terminalserver_ts_time_zone"
-                    choiceSettingValue  = @{
-                        settingValueTemplateReference  = $null
-                        children  = @()
-                        value  = "device_vendor_msft_policy_config_admx_terminalserver_ts_time_zone_1"
-                    }
-                }
-            }
-            @{
-                id = "1"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_clipboard"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_clipboard_1"
-                    }
-                }
-            }
-            @{
-                id = "2"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_com"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_com_1"
-                    }
-                }
-            }
-            @{
-                id = "3"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_remotedesktopservices_donotallowdriveredirection"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_remotedesktopservices_donotallowdriveredirection_1"
-                    }
-                }
-            }
-            @{
-                id = "4"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_lpt"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_lpt_1"
-                    }
-                }
-            }
-            @{
-                id = "5"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_smart_card"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_smart_card_1"
-                    }
-                }
-            }
-            @{
-                id = "6"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_pnp"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_pnp_1"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Azure Virtual Desktop Hosts"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 3
-        name = "Configure GPU acceleration for Azure Virtual Desktop"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = "Azure Virtual Desktop supports graphics processing unit (GPU) acceleration in rendering and encoding for improved app performance and scalability. GPU acceleration is crucial for graphics-intensive apps and can be used with all supported operating systems for Azure Virtual Desktop."
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc_hw_encode_preferred"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc_hw_encode_preferred_1"
-                    }
-                }
-            }
-            @{
-                id = "1"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc444_mode_preferred"
-                        choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc444_mode_preferred_1"
-                    }
-                }
-            }
-            @{
-                id = "2"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_dx_use_full_hwgpu"
-                        choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_dx_use_full_hwgpu_1"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "GPU-optimized Azure VMs"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 8
-        name = "Configure OneDrive settings"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = ""
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_allowtenantlist"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @(
-                            @{
-                                simpleSettingCollectionValue = @(
-                                    @{
-                                        settingValueTemplateReference = $null
-                                        "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                                        value = $TenantId
-                                    }
-                                )
-                                settingInstanceTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance"
-                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_allowtenantlist_allowtenantlistbox"
-                            }
-                        )
-                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_allowtenantlist_1"
-                    }
-                }
-            }
-            @{
-            id = "1"
-            settingInstance = @{
-                settingInstanceTemplateReference = $null
-                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv4~policy~onedrivengsc_enableodignorelistfromgpo"
-                choiceSettingValue = @{
-                    settingValueTemplateReference = $null
-                    children = @(
-                        @{
-                            simpleSettingCollectionValue = @(
-                                @{
-                                    settingValueTemplateReference = $null
-                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                                    value = "*.mp3"
-                                }
-                                @{
-                                    settingValueTemplateReference = $null
-                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                                    value = "*.pst"
-                                }
-                            )
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv4~policy~onedrivengsc_enableodignorelistfromgpo_enableodignorelistfromgpolistbox"
-                        }
-                    )
-                    value = "device_vendor_msft_policy_config_onedrivengscv4~policy~onedrivengsc_enableodignorelistfromgpo_1"
-                }
-            }
-            }
-            @{
-                id = "2"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_blockexternalsync"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_blockexternalsync_1"
-                    }
-                }
-            }
-            @{
-            id = "3"
-            settingInstance = @{
-                settingInstanceTemplateReference = $null
-                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinwithwizard"
-                choiceSettingValue = @{
-                    settingValueTemplateReference = $null
-                    children = @(
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinwithwizard_kfmoptinwithwizard_textbox"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                                value = $TenantId
-                            }
-                        }
-                    )
-                    value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinwithwizard_1"
-                }
-            }
-            }
-            @{
-            id = "4"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv3~policy~onedrivengsc_localmassdeletefiledeletethreshold"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @(
-                            @{
-                                settingInstanceTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv3~policy~onedrivengsc_localmassdeletefiledeletethreshold_lmdfiledeletethresholdbox"
-                                simpleSettingValue = @{
-                                    settingValueTemplateReference = $null
-                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
-                                    value = 25
-                                }
-                            }
-                        )
-                        value = "device_vendor_msft_policy_config_onedrivengscv3~policy~onedrivengsc_localmassdeletefiledeletethreshold_1"
-                    }
-                }
-            }
-            @{
-                id = "5"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_forcedlocalmassdeletedetection"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_forcedlocalmassdeletedetection_1"
-                    }
-                }
-            }
-            @{
-                id = "6"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @(
-                            @{
-                                settingInstanceTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_kfmoptinnowizard_dropdown"
-                                choiceSettingValue = @{
-                                    settingValueTemplateReference = $null
-                                    children = @()
-                                    value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_kfmoptinnowizard_dropdown_0"
-                                }
-                            }
-                            @{
-                                settingInstanceTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_kfmoptinnowizard_textbox"
-                                simpleSettingValue = @{
-                                    settingValueTemplateReference = $null
-                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                                    value = $TenantId
-                                }
-                            }
-                        )
-                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_1"
-                    }
-                }
-            }
-            @{
-                id = "7"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_silentaccountconfig"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_silentaccountconfig_1"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Azure Virtual Desktop Hosts"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 1
-        name = "Configure Windows NTP client"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = ""
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient"
-                    choiceSettingValue = @{
-                    settingValueTemplateReference = $null
-                    children = @(
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_crosssitesyncflags"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
-                                value = 2
-                            }
-                        }
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_ntpclienteventlogflags"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
-                                value = 0
-                            }
-                        }
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_ntpserver"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                                value = "time.nist.gov0x01"
-                            }
-                        }
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_resolvepeerbackoffmaxtimes"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
-                                value = 7
-                            }
-                        }
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_resolvepeerbackoffminutes"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
-                                value = 15
-                            }
-                        }
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_specialpollinterval"
-                            simpleSettingValue = @{
-                                settingValueTemplateReference = $null
-                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
-                                value = 3600
-                            }
-                        }
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_type"
-                            choiceSettingValue = @{
-                                settingValueTemplateReference = $null
-                                children = @()
-                                value = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_type_ntp"
-                            }
-                        }
-                    )
-                    value = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_1"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Azure Virtual Desktop Hosts"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 1
-        name = "Disable password reveal"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = "Disables the password reveal button"
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "user_vendor_msft_policy_config_credentialsui_disablepasswordreveal"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "user_vendor_msft_policy_config_credentialsui_disablepasswordreveal_1"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Users"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 2
-        name = "Enable Azure Information Protection add-in for sensitivity labeling"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = "Enables the policy that ensures Azure Information Protection add-in for\nsensitivity labeling is present"
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "user_vendor_msft_policy_config_office16v13~policy~l_microsoftofficesystem~l_securitysettings_l_aipexception"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "user_vendor_msft_policy_config_office16v13~policy~l_microsoftofficesystem~l_securitysettings_l_aipexception_1"
-                    }
-                }
-            }
-            @{
-                id = "1"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "user_vendor_msft_policy_config_office16v3~policy~l_microsoftofficesystem~l_securitysettings_l_useofficeforlabelling"
-                    choiceSettingValue = @{
-                        settingValueTemplateReference = $null
-                        children = @()
-                        value = "user_vendor_msft_policy_config_office16v3~policy~l_microsoftofficesystem~l_securitysettings_l_useofficeforlabelling_0"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Users"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 2
-        name = "Enable interactive logon banner"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = "Displays interactive logon"
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    simpleSettingCollectionValue = @(
-                        @{
-                            settingValueTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                            value = "This system is the property of $CustomerName and is intended for authorized users only. Employees and users of $CustomerName’s Electronic Systems (including desktop computers laptop computers servers mobile devices email Internet access and business applications) should have no expectation of privacy with regard to use of these resources. All individuals’ activities while using $CustomerName’s Electronic Systems may be monitored and audited. By signing on and using any of these Electronic Systems users acknowledge that all data messages documents etc. sent received or reviewed while using these Electronic Systems are property of $CustomerName. Additionally this system contains federal contract information and/or Controlled Unclassified Information (CUI). By using this system (which includes any device attached to this system) you consent to abide by $CustomerName's policies regarding CUI. You further acknowledge that failure to abide by these terms and usage requirements may result in revoked or suspended access privileges."
-                        }
-                    )
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_messagetextforusersattemptingtologon"
-                }
-            }
-            @{
-                id = "1"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_messagetitleforusersattemptingtologon"
-                    simpleSettingValue = @{
-                        settingValueTemplateReference = $null
-                        "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
-                        value = "$CustomerName Terms of Use"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Azure Virtual Desktop Hosts"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-    @{
-        platforms = "windows10"
-        technologies = "mdm"
-        settingCount = 1
-        name = "Enable screen capture protection"
-        templateReference = @{
-            templateDisplayVersion = $null
-            templateFamily = "none"
-            templateDisplayName = $null
-            templateId = ""
-        }
-        roleScopeTagIds = @(
-            "0"
-        )
-        creationSource = $null
-        description = "Prevents users from capturing the screen for sharing"
-        priorityMetaData = $null
-        settings = @(
-            @{
-                id = "0"
-                settingInstance = @{
-                    settingInstanceTemplateReference = $null
-                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                    settingDefinitionId = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection"
-                    choiceSettingValue = @{
-                    settingValueTemplateReference = $null
-                    children = @(
-                        @{
-                            settingInstanceTemplateReference = $null
-                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
-                            settingDefinitionId = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_avd_server_screen_capture_protection_level"
-                            choiceSettingValue = @{
-                                settingValueTemplateReference = $null
-                                children = @()
-                                value = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_avd_server_screen_capture_protection_level_1"
-                            }   
-                        }
-                    )
-                    value = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_1"
-                    }
-                }
-            }
-        )
-        assignments = @(
-            @{
-                target= @{
-                    deviceAndAppManagementAssignmentFilterId = $null
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
-                    groupId = "All Azure Virtual Desktop Hosts"
-                    deviceAndAppManagementAssignmentFilterType = "none"
-                }
-            }
-        )
-    }
-)
+# This script creates Intune device configuration policies for Azure Virtual Desktop hosts.
+# It includes policies for BitLocker, lock screen inactivity, and other security settings.
 $TemplatePolicies = @(
     @{
         bitLockerEnableStorageCardEncryptionOnMobile = $false
@@ -1588,6 +868,734 @@ $TemplatePolicies = @(
     }  
 )
 
+# This script defines a set of Intune device configuration policies for Windows 10 and later devices.
+# Each policy is represented as a hashtable with various settings and configurations.
+$SettingsCatalogPolicies = @(
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 7
+        name = "Configure device and resource redirection"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = ""
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type" = "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId  = "device_vendor_msft_policy_config_admx_terminalserver_ts_time_zone"
+                    choiceSettingValue  = @{
+                        settingValueTemplateReference  = $null
+                        children  = @()
+                        value  = "device_vendor_msft_policy_config_admx_terminalserver_ts_time_zone_1"
+                    }
+                }
+            }
+            @{
+                id = "1"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_clipboard"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_clipboard_1"
+                    }
+                }
+            }
+            @{
+                id = "2"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_com"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_com_1"
+                    }
+                }
+            }
+            @{
+                id = "3"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_remotedesktopservices_donotallowdriveredirection"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_remotedesktopservices_donotallowdriveredirection_1"
+                    }
+                }
+            }
+            @{
+                id = "4"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_lpt"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_lpt_1"
+                    }
+                }
+            }
+            @{
+                id = "5"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_smart_card"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_smart_card_1"
+                    }
+                }
+            }
+            @{
+                id = "6"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_pnp"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_client_pnp_1"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Azure Virtual Desktop Hosts"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 3
+        name = "Configure GPU acceleration for Azure Virtual Desktop"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = "Azure Virtual Desktop supports graphics processing unit (GPU) acceleration in rendering and encoding for improved app performance and scalability. GPU acceleration is crucial for graphics-intensive apps and can be used with all supported operating systems for Azure Virtual Desktop."
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc_hw_encode_preferred"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc_hw_encode_preferred_1"
+                    }
+                }
+            }
+            @{
+                id = "1"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc444_mode_preferred"
+                        choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_server_avc444_mode_preferred_1"
+                    }
+                }
+            }
+            @{
+                id = "2"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_terminalserver_ts_dx_use_full_hwgpu"
+                        choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_admx_terminalserver_ts_dx_use_full_hwgpu_1"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "GPU-optimized Azure VMs"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 8
+        name = "Configure OneDrive settings"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = ""
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_allowtenantlist"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @(
+                            @{
+                                simpleSettingCollectionValue = @(
+                                    @{
+                                        settingValueTemplateReference = $null
+                                        "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                                        value = $TenantId
+                                    }
+                                )
+                                settingInstanceTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance"
+                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_allowtenantlist_allowtenantlistbox"
+                            }
+                        )
+                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_allowtenantlist_1"
+                    }
+                }
+            }
+            @{
+            id = "1"
+            settingInstance = @{
+                settingInstanceTemplateReference = $null
+                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv4~policy~onedrivengsc_enableodignorelistfromgpo"
+                choiceSettingValue = @{
+                    settingValueTemplateReference = $null
+                    children = @(
+                        @{
+                            simpleSettingCollectionValue = @(
+                                @{
+                                    settingValueTemplateReference = $null
+                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                                    value = "*.mp3"
+                                }
+                                @{
+                                    settingValueTemplateReference = $null
+                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                                    value = "*.pst"
+                                }
+                            )
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv4~policy~onedrivengsc_enableodignorelistfromgpo_enableodignorelistfromgpolistbox"
+                        }
+                    )
+                    value = "device_vendor_msft_policy_config_onedrivengscv4~policy~onedrivengsc_enableodignorelistfromgpo_1"
+                }
+            }
+            }
+            @{
+                id = "2"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_blockexternalsync"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_blockexternalsync_1"
+                    }
+                }
+            }
+            @{
+            id = "3"
+            settingInstance = @{
+                settingInstanceTemplateReference = $null
+                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinwithwizard"
+                choiceSettingValue = @{
+                    settingValueTemplateReference = $null
+                    children = @(
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinwithwizard_kfmoptinwithwizard_textbox"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                                value = $TenantId
+                            }
+                        }
+                    )
+                    value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinwithwizard_1"
+                }
+            }
+            }
+            @{
+            id = "4"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv3~policy~onedrivengsc_localmassdeletefiledeletethreshold"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @(
+                            @{
+                                settingInstanceTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv3~policy~onedrivengsc_localmassdeletefiledeletethreshold_lmdfiledeletethresholdbox"
+                                simpleSettingValue = @{
+                                    settingValueTemplateReference = $null
+                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
+                                    value = 25
+                                }
+                            }
+                        )
+                        value = "device_vendor_msft_policy_config_onedrivengscv3~policy~onedrivengsc_localmassdeletefiledeletethreshold_1"
+                    }
+                }
+            }
+            @{
+                id = "5"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_forcedlocalmassdeletedetection"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_forcedlocalmassdeletedetection_1"
+                    }
+                }
+            }
+            @{
+                id = "6"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @(
+                            @{
+                                settingInstanceTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_kfmoptinnowizard_dropdown"
+                                choiceSettingValue = @{
+                                    settingValueTemplateReference = $null
+                                    children = @()
+                                    value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_kfmoptinnowizard_dropdown_0"
+                                }
+                            }
+                            @{
+                                settingInstanceTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                                settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_kfmoptinnowizard_textbox"
+                                simpleSettingValue = @{
+                                    settingValueTemplateReference = $null
+                                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                                    value = $TenantId
+                                }
+                            }
+                        )
+                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_kfmoptinnowizard_1"
+                    }
+                }
+            }
+            @{
+                id = "7"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_silentaccountconfig"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "device_vendor_msft_policy_config_onedrivengscv2~policy~onedrivengsc_silentaccountconfig_1"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Azure Virtual Desktop Hosts"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 1
+        name = "Configure Windows NTP client"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = ""
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient"
+                    choiceSettingValue = @{
+                    settingValueTemplateReference = $null
+                    children = @(
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_crosssitesyncflags"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
+                                value = 2
+                            }
+                        }
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_ntpclienteventlogflags"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
+                                value = 0
+                            }
+                        }
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_ntpserver"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                                value = "time.nist.gov0x01"
+                            }
+                        }
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_resolvepeerbackoffmaxtimes"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
+                                value = 7
+                            }
+                        }
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_resolvepeerbackoffminutes"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
+                                value = 15
+                            }
+                        }
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_specialpollinterval"
+                            simpleSettingValue = @{
+                                settingValueTemplateReference = $null
+                                "@odata.type"= "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue"
+                                value = 3600
+                            }
+                        }
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_type"
+                            choiceSettingValue = @{
+                                settingValueTemplateReference = $null
+                                children = @()
+                                value = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_w32time_type_ntp"
+                            }
+                        }
+                    )
+                    value = "device_vendor_msft_policy_config_admx_w32time_w32time_policy_configure_ntpclient_1"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Azure Virtual Desktop Hosts"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 1
+        name = "Disable password reveal"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = "Disables the password reveal button"
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "user_vendor_msft_policy_config_credentialsui_disablepasswordreveal"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "user_vendor_msft_policy_config_credentialsui_disablepasswordreveal_1"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Users"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 2
+        name = "Enable Azure Information Protection add-in for sensitivity labeling"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = "Enables the policy that ensures Azure Information Protection add-in for\nsensitivity labeling is present"
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "user_vendor_msft_policy_config_office16v13~policy~l_microsoftofficesystem~l_securitysettings_l_aipexception"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "user_vendor_msft_policy_config_office16v13~policy~l_microsoftofficesystem~l_securitysettings_l_aipexception_1"
+                    }
+                }
+            }
+            @{
+                id = "1"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "user_vendor_msft_policy_config_office16v3~policy~l_microsoftofficesystem~l_securitysettings_l_useofficeforlabelling"
+                    choiceSettingValue = @{
+                        settingValueTemplateReference = $null
+                        children = @()
+                        value = "user_vendor_msft_policy_config_office16v3~policy~l_microsoftofficesystem~l_securitysettings_l_useofficeforlabelling_0"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Users"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 2
+        name = "Enable interactive logon banner"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = "Displays interactive logon"
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    simpleSettingCollectionValue = @(
+                        @{
+                            settingValueTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                            value = "This system is the property of $CustomerName and is intended for authorized users only. Employees and users of $CustomerName’s Electronic Systems (including desktop computers laptop computers servers mobile devices email Internet access and business applications) should have no expectation of privacy with regard to use of these resources. All individuals’ activities while using $CustomerName’s Electronic Systems may be monitored and audited. By signing on and using any of these Electronic Systems users acknowledge that all data messages documents etc. sent received or reviewed while using these Electronic Systems are property of $CustomerName. Additionally this system contains federal contract information and/or Controlled Unclassified Information (CUI). By using this system (which includes any device attached to this system) you consent to abide by $CustomerName's policies regarding CUI. You further acknowledge that failure to abide by these terms and usage requirements may result in revoked or suspended access privileges."
+                        }
+                    )
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_messagetextforusersattemptingtologon"
+                }
+            }
+            @{
+                id = "1"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_messagetitleforusersattemptingtologon"
+                    simpleSettingValue = @{
+                        settingValueTemplateReference = $null
+                        "@odata.type"= "#microsoft.graph.deviceManagementConfigurationStringSettingValue"
+                        value = "$CustomerName Terms of Use"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Azure Virtual Desktop Hosts"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+    @{
+        platforms = "windows10"
+        technologies = "mdm"
+        settingCount = 1
+        name = "Enable screen capture protection"
+        templateReference = @{
+            templateDisplayVersion = $null
+            templateFamily = "none"
+            templateDisplayName = $null
+            templateId = ""
+        }
+        roleScopeTagIds = @(
+            "0"
+        )
+        creationSource = $null
+        description = "Prevents users from capturing the screen for sharing"
+        priorityMetaData = $null
+        settings = @(
+            @{
+                id = "0"
+                settingInstance = @{
+                    settingInstanceTemplateReference = $null
+                    "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                    settingDefinitionId = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection"
+                    choiceSettingValue = @{
+                    settingValueTemplateReference = $null
+                    children = @(
+                        @{
+                            settingInstanceTemplateReference = $null
+                            "@odata.type"= "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                            settingDefinitionId = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_avd_server_screen_capture_protection_level"
+                            choiceSettingValue = @{
+                                settingValueTemplateReference = $null
+                                children = @()
+                                value = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_avd_server_screen_capture_protection_level_1"
+                            }   
+                        }
+                    )
+                    value = "device_vendor_msft_policy_config_terminalserver-avdv1~policy~avd_gp_node_avd_server_screen_capture_protection_1"
+                    }
+                }
+            }
+        )
+        assignments = @(
+            @{
+                target= @{
+                    deviceAndAppManagementAssignmentFilterId = $null
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget" 
+                    groupId = "All Azure Virtual Desktop Hosts"
+                    deviceAndAppManagementAssignmentFilterType = "none"
+                }
+            }
+        )
+    }
+)
+
 Connect-MgGraph -Scopes "DeviceManagementApps.ReadWrite.All, DeviceManagementConfiguration.ReadWrite.All, DeviceManagementServiceConfig.ReadWrite.All, DeviceManagementManagedDevices.ReadWrite.All, Group.ReadWrite.All" -Environment USGov
 
 <# Group for the following settings catalog intune device configuration profiles
@@ -1666,7 +1674,14 @@ if ($GpuVms) {
     }
 }
 
+Start-Sleep -Seconds 180 # Wait for the groups to be created and available
+
 $TemplatePolicies | ForEach-Object -Process {
+    # Skip GPU-optimized Azure VMs if not specified
+    if ($GpuVms -eq $false -and $_.name -eq "Configure GPU acceleration for Azure Virtual Desktop") {
+        Write-Host ("Skipping policy: {0} as GPU-optimized Azure VMs are not specified." -f $_.DisplayName) -ForegroundColor Yellow
+        return
+    }
     Write-Host ("Creating Device Configuration Policy: {0}" -f $_.DisplayName) -ForegroundColor Green
 
     # Remove assignments property

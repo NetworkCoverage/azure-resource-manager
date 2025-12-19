@@ -74,6 +74,7 @@ $requiredLicenses = @(
     'AAD_PREMIUM_P2*',              # For Entra PIM features
     'ENTERPRISE_MOBILITY_S5*',      # Microsoft Entra ID Governance
     'AAD_GOV_PREMIUM_P2*'           # If you're in USGov and it's named differently
+    'SPE_E5_USGOV_GCCHIGH*'         # USGov GCC High E5
 )
 
 if (-not ($licenses.SkuPartNumber -match ($requiredLicenses -join '|'))) {
