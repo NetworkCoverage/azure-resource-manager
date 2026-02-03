@@ -1617,7 +1617,7 @@ if ($null -eq $AvdHostGroup) {
    - Enable Azure Information Protection add-in for sensitivity labeling
    Group for Set lock screen inactivity timer endpoint protection intune device configuration profile
 #>
-$AllUsersGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:All Users"'
+<#$AllUsersGroup = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:All Users"'
 if ($null -eq $AllUsersGroup) {
     $parameters = @{
         DisplayName = 'All Users'
@@ -1631,6 +1631,25 @@ if ($null -eq $AllUsersGroup) {
     }
     $AllUsersGroup = New-MgGroup @parameters
 }
+#>
+$AllUsersGroup = Get-MgGroup -ConsistencyLevel eventual -CountVariable groupCount -Search '"displayName:All Users"' -Property Id,DisplayName
+
+if (-not $AllUsersGroup) {
+
+    $parameters = @{
+        DisplayName     = 'All Users'
+        Description     = 'This group is for all users'
+        SecurityEnabled = $true
+        MailEnabled     = $false
+        MailNickname    = (New-Guid).ToString().Substring(0,10)
+        GroupTypes      = @('DynamicMembership')
+        MembershipRule  = '(user.accountEnabled -eq true)'
+        MembershipRuleProcessingState = 'On'
+    }
+
+    $AllUsersGroup = New-MgGroup @parameters
+}
+
 
 # Group for Set password policy device restriction intune device configuration profile
 $AllWindows10Group = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:All Windows 10 and later Devices"'
@@ -1666,105 +1685,571 @@ if ($GpuVms) {
     }
 }
 
-$TemplatePolicies | ForEach-Object -Process {
-    Write-Host ("Creating Device Configuration Policy: {0}" -f $_.DisplayName) -ForegroundColor Green
+function Get-ExistingDeviceConfiguration {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]$DisplayName,
 
-    # Remove assignments property
-    $DeviceConfigurationRequestBody = $_ | Select-Object -Property * -ExcludeProperty assignments
-    # Set SupportsScopeTags to $false, because $true currently returns an HTTP Status 400 Bad Request error.
-    if ($DeviceConfigurationRequestBody.supportsScopeTags) {
-        $DeviceConfigurationRequestBody.supportsScopeTags = $false
+        [Parameter(Mandatory = $false)]
+        [System.String]$ODataType
+    )
+
+    $LookupKey = Get-NormalizedPolicyName -Name $DisplayName
+    if ([string]::IsNullOrWhiteSpace($LookupKey)) {
+        return $null
     }
 
-    $DeviceConfigurationRequestBody = $DeviceConfigurationRequestBody  | ConvertTo-Json -Depth 100
+    if (-not $script:DeviceConfigurationByName.ContainsKey($LookupKey)) {
+        return $null
+    }
 
-    # Create the device configuration
+    $Candidates = @($script:DeviceConfigurationByName[$LookupKey])
+    if (-not [string]::IsNullOrWhiteSpace($ODataType)) {
+        $TypedMatch = $Candidates | Where-Object { $_.'@odata.type' -eq $ODataType } | Select-Object -First 1
+        if ($null -ne $TypedMatch) {
+            return $TypedMatch
+        }
+    }
+
+    return $Candidates | Select-Object -First 1
+}
+
+function Get-ExistingSettingsCatalogPolicy {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]$Name
+    )
+
+    $LookupKey = Get-NormalizedPolicyName -Name $Name
+    if ([string]::IsNullOrWhiteSpace($LookupKey)) {
+        return $null
+    }
+
+    if ($script:SettingsCatalogPolicyByName.ContainsKey($LookupKey)) {
+        return $script:SettingsCatalogPolicyByName[$LookupKey]
+    }
+
+    return $null
+}
+
+function Get-NormalizedPolicyName {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]$Name
+    )
+
+    return $Name.Trim().ToLowerInvariant()
+}
+
+function Get-AllGraphItems {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]$Uri
+    )
+
+    $Items = @()
+    $NextPage = $Uri
+
+    while (-not [string]::IsNullOrWhiteSpace($NextPage)) {
+        $Response = Invoke-MgGraphRequest -Method GET -Uri $NextPage -ErrorAction Stop
+        if ($null -ne $Response.value) {
+            $Items += @($Response.value)
+            $NextPage = $Response.'@odata.nextLink'
+        }
+        else {
+            $Items += @($Response)
+            $NextPage = $null
+        }
+    }
+
+    return $Items
+}
+
+function Remove-NullProperties {
+    param (
+        [AllowNull()]
+        $InputObject
+    )
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+
+    # Keep scalar values as-is; do not enumerate string/primitive members like ".Length".
+    if (
+        ($InputObject -is [string]) -or
+        ($InputObject -is [ValueType]) -or
+        ($InputObject -is [datetime]) -or
+        ($InputObject -is [datetimeoffset]) -or
+        ($InputObject -is [guid]) -or
+        ($InputObject -is [uri]) -or
+        ($InputObject -is [version]) -or
+        ($InputObject -is [timespan])
+    ) {
+        return $InputObject
+    }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $Result = [ordered]@{}
+        foreach ($Key in $InputObject.Keys) {
+            $CleanValue = Remove-NullProperties -InputObject $InputObject[$Key]
+            if ($null -ne $CleanValue) {
+                $Result[$Key] = $CleanValue
+            }
+        }
+        return $Result
+    }
+
+    if (($InputObject -is [System.Collections.IEnumerable]) -and -not ($InputObject -is [string])) {
+        $Result = @()
+        foreach ($Item in $InputObject) {
+            $CleanItem = Remove-NullProperties -InputObject $Item
+            if ($null -ne $CleanItem) {
+                $Result += ,$CleanItem
+            }
+        }
+        return $Result
+    }
+
+    $Properties = $InputObject.PSObject.Properties
+    if (($null -ne $Properties) -and ($Properties.Count -gt 0)) {
+        $Result = [ordered]@{}
+        foreach ($Property in $Properties) {
+            $CleanValue = Remove-NullProperties -InputObject $Property.Value
+            if ($null -ne $CleanValue) {
+                $Result[$Property.Name] = $CleanValue
+            }
+        }
+        return $Result
+    }
+
+    return $InputObject
+}
+
+function Remove-ArrayProperties {
+    param (
+        [AllowNull()]
+        $InputObject
+    )
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $Result = [ordered]@{}
+        foreach ($Key in $InputObject.Keys) {
+            $Value = $InputObject[$Key]
+            if (($Value -is [System.Collections.IEnumerable]) -and -not ($Value -is [string]) -and -not ($Value -is [System.Collections.IDictionary])) {
+                continue
+            }
+
+            $CleanValue = Remove-ArrayProperties -InputObject $Value
+            if ($null -ne $CleanValue) {
+                $Result[$Key] = $CleanValue
+            }
+        }
+        return $Result
+    }
+
+    $Properties = $InputObject.PSObject.Properties
+    if (($null -ne $Properties) -and ($Properties.Count -gt 0)) {
+        $Result = [ordered]@{}
+        foreach ($Property in $Properties) {
+            $Value = $Property.Value
+            if (($Value -is [System.Collections.IEnumerable]) -and -not ($Value -is [string]) -and -not ($Value -is [System.Collections.IDictionary])) {
+                continue
+            }
+
+            $CleanValue = Remove-ArrayProperties -InputObject $Value
+            if ($null -ne $CleanValue) {
+                $Result[$Property.Name] = $CleanValue
+            }
+        }
+        return $Result
+    }
+
+    return $InputObject
+}
+
+function Remove-PropertyRecursive {
+    param (
+        [AllowNull()]
+        $InputObject,
+
+        [Parameter(Mandatory = $true)]
+        [System.String]$PropertyName
+    )
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $Result = [ordered]@{}
+        foreach ($Key in $InputObject.Keys) {
+            if ($Key -eq $PropertyName) {
+                continue
+            }
+
+            $CleanValue = Remove-PropertyRecursive -InputObject $InputObject[$Key] -PropertyName $PropertyName
+            if ($null -ne $CleanValue) {
+                $Result[$Key] = $CleanValue
+            }
+        }
+        return $Result
+    }
+
+    if (($InputObject -is [System.Collections.IEnumerable]) -and -not ($InputObject -is [string])) {
+        $Result = @()
+        foreach ($Item in $InputObject) {
+            $CleanItem = Remove-PropertyRecursive -InputObject $Item -PropertyName $PropertyName
+            if ($null -ne $CleanItem) {
+                $Result += ,$CleanItem
+            }
+        }
+        return $Result
+    }
+
+    $Properties = $InputObject.PSObject.Properties
+    if (($null -ne $Properties) -and ($Properties.Count -gt 0)) {
+        $Result = [ordered]@{}
+        foreach ($Property in $Properties) {
+            if ($Property.Name -eq $PropertyName) {
+                continue
+            }
+
+            $CleanValue = Remove-PropertyRecursive -InputObject $Property.Value -PropertyName $PropertyName
+            if ($null -ne $CleanValue) {
+                $Result[$Property.Name] = $CleanValue
+            }
+        }
+        return $Result
+    }
+
+    return $InputObject
+}
+
+function Normalize-ODataTypeValues {
+    param (
+        [AllowNull()]
+        $InputObject
+    )
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $Result = [ordered]@{}
+        foreach ($Key in $InputObject.Keys) {
+            $Value = Normalize-ODataTypeValues -InputObject $InputObject[$Key]
+            if ($Key -eq '@odata.type') {
+                if ([string]::IsNullOrWhiteSpace([string]$Value)) {
+                    continue
+                }
+                $Result[$Key] = [string]$Value
+            }
+            else {
+                $Result[$Key] = $Value
+            }
+        }
+        return $Result
+    }
+
+    if (($InputObject -is [System.Collections.IEnumerable]) -and -not ($InputObject -is [string])) {
+        $Result = @()
+        foreach ($Item in $InputObject) {
+            $Result += ,(Normalize-ODataTypeValues -InputObject $Item)
+        }
+        return $Result
+    }
+
+    $Properties = $InputObject.PSObject.Properties
+    if (($null -ne $Properties) -and ($Properties.Count -gt 0)) {
+        $Result = [ordered]@{}
+        foreach ($Property in $Properties) {
+            $Value = Normalize-ODataTypeValues -InputObject $Property.Value
+            if ($Property.Name -eq '@odata.type') {
+                if ([string]::IsNullOrWhiteSpace([string]$Value)) {
+                    continue
+                }
+                $Result[$Property.Name] = [string]$Value
+            }
+            else {
+                $Result[$Property.Name] = $Value
+            }
+        }
+        return $Result
+    }
+
+    return $InputObject
+}
+
+function Initialize-ExistingPolicyCache {
+    $script:DeviceConfigurationByName = @{}
+    $script:SettingsCatalogPolicyByName = @{}
+
+    $ExistingDeviceConfigurations = Get-AllGraphItems -Uri ("{0}/deviceManagement/deviceConfigurations?`$top=999" -f $ApiVersion)
+    foreach ($Policy in $ExistingDeviceConfigurations) {
+        if ([string]::IsNullOrWhiteSpace($Policy.displayName)) {
+            continue
+        }
+
+        $Key = Get-NormalizedPolicyName -Name $Policy.displayName
+        if (-not $script:DeviceConfigurationByName.ContainsKey($Key)) {
+            $script:DeviceConfigurationByName[$Key] = @($Policy)
+        }
+        elseif (@($script:DeviceConfigurationByName[$Key]).id -notcontains $Policy.id) {
+            $script:DeviceConfigurationByName[$Key] += @($Policy)
+            Write-Warning ("Multiple device configuration policies found with the same name '{0}'. Updating the first match." -f $Policy.displayName)
+        }
+    }
+
+    $ExistingSettingsCatalogPolicies = Get-AllGraphItems -Uri ("{0}/deviceManagement/configurationPolicies?`$select=id,name&`$top=999" -f $ApiVersion)
+    foreach ($Policy in $ExistingSettingsCatalogPolicies) {
+        if ([string]::IsNullOrWhiteSpace($Policy.name)) {
+            continue
+        }
+
+        $Key = Get-NormalizedPolicyName -Name $Policy.name
+        if (-not $script:SettingsCatalogPolicyByName.ContainsKey($Key)) {
+            $script:SettingsCatalogPolicyByName[$Key] = $Policy
+        }
+        elseif ($script:SettingsCatalogPolicyByName[$Key].id -ne $Policy.id) {
+            Write-Warning ("Multiple settings catalog policies found with the same name '{0}'. Updating the first match." -f $Policy.name)
+        }
+    }
+}
+
+function Resolve-GroupId {
+    param (
+        [AllowNull()]
+        $GroupObject,
+
+        [Parameter(Mandatory = $true)]
+        [System.String]$GroupName
+    )
+
+    $Ids = @(
+        $GroupObject |
+        ForEach-Object { $_.id } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Select-Object -Unique
+    )
+
+    if ($Ids.Count -gt 1) {
+        Write-Warning ("Multiple Entra groups found for '{0}'. Using the first id: {1}" -f $GroupName, $Ids[0])
+    }
+
+    if ($Ids.Count -eq 0) {
+        return $null
+    }
+
+    return [string]$Ids[0]
+}
+
+$GroupIdByName = @{
+    "All Azure Virtual Desktop Hosts" = Resolve-GroupId -GroupObject $AvdHostGroup -GroupName "All Azure Virtual Desktop Hosts"
+    "All Users" = Resolve-GroupId -GroupObject $AllUsersGroup -GroupName "All Users"
+    "All Windows 10 and later Devices" = Resolve-GroupId -GroupObject $AllWindows10Group -GroupName "All Windows 10 and later Devices"
+}
+if ($GpuVms) {
+    $GroupIdByName["GPU-optimized Azure VMs"] = Resolve-GroupId -GroupObject $AvdGpuGroup -GroupName "GPU-optimized Azure VMs"
+}
+
+Initialize-ExistingPolicyCache
+
+foreach ($TemplatePolicy in $TemplatePolicies) {
+    Write-Host ("Reviewing Device Configuration Policy: {0}" -f $TemplatePolicy.DisplayName) -ForegroundColor Green
+
+    $SkipPolicy = $false
+    foreach ($Assignment in $TemplatePolicy.assignments) {
+        if (($Assignment.target.groupId -eq "GPU-optimized Azure VMs") -and (-not $GpuVms)) {
+            Write-Warning ("Skipping policy '{0}' because -GpuVms was not provided." -f $TemplatePolicy.DisplayName)
+            $SkipPolicy = $true
+            break
+        }
+    }
+    if ($SkipPolicy) {
+        continue
+    }
+
+    $DeviceConfigurationRequestBodyObject = $TemplatePolicy | Select-Object -Property * -ExcludeProperty assignments
+    if ($DeviceConfigurationRequestBodyObject.supportsScopeTags) {
+        $DeviceConfigurationRequestBodyObject.supportsScopeTags = $false
+    }
+    $DeviceConfigurationRequestBody = $DeviceConfigurationRequestBodyObject | ConvertTo-Json -Depth 100
+
+    $DeviceConfigurationId = $null
     try {
-        $DeviceConfiguration = Invoke-MgGraphRequest -Method POST -body $DeviceConfigurationRequestBody.toString() -Uri ("{0}/deviceManagement/deviceConfigurations" -f $ApiVersion) -ErrorAction Stop 
-        
+        $ExistingDeviceConfiguration = Get-ExistingDeviceConfiguration -DisplayName $TemplatePolicy.DisplayName -ODataType $TemplatePolicy.'@odata.type'
+        if ($null -ne $ExistingDeviceConfiguration) {
+            # Some USGov Graph beta deviceConfiguration PATCH payloads fail schema validation.
+            # Replace the policy to keep runs idempotent and avoid malformed PATCH errors.
+            Write-Host ("Replacing Device Configuration Policy: {0}" -f $TemplatePolicy.DisplayName) -ForegroundColor Yellow
+            Invoke-MgGraphRequest -Method DELETE -Uri ("{0}/deviceManagement/deviceConfigurations/{1}" -f $ApiVersion, $ExistingDeviceConfiguration.id) -ErrorAction Stop | Out-Null
+
+            $DeviceConfiguration = Invoke-MgGraphRequest -Method POST -Body $DeviceConfigurationRequestBody.ToString() -Uri ("{0}/deviceManagement/deviceConfigurations" -f $ApiVersion) -ErrorAction Stop
+            $DeviceConfigurationId = $DeviceConfiguration.id
+            $script:DeviceConfigurationByName[(Get-NormalizedPolicyName -Name $TemplatePolicy.DisplayName)] = @([PSCustomObject]@{
+                id = $DeviceConfigurationId
+                displayName = $TemplatePolicy.DisplayName
+                '@odata.type' = $TemplatePolicy.'@odata.type'
+            })
+        }
+        else {
+            Write-Host ("Creating Device Configuration Policy: {0}" -f $TemplatePolicy.DisplayName) -ForegroundColor Green
+            $DeviceConfiguration = Invoke-MgGraphRequest -Method POST -Body $DeviceConfigurationRequestBody.ToString() -Uri ("{0}/deviceManagement/deviceConfigurations" -f $ApiVersion) -ErrorAction Stop
+            $DeviceConfigurationId = $DeviceConfiguration.id
+            $script:DeviceConfigurationByName[(Get-NormalizedPolicyName -Name $TemplatePolicy.DisplayName)] = @([PSCustomObject]@{
+                id = $DeviceConfigurationId
+                displayName = $TemplatePolicy.DisplayName
+                '@odata.type' = $TemplatePolicy.'@odata.type'
+            })
+        }
     }
     catch {
-        Write-Verbose ("{0} - Failed to create Device Configuration" -f $_.DisplayName) -Verbose
+        Write-Verbose ("{0} - Failed to create/update Device Configuration" -f $TemplatePolicy.DisplayName) -Verbose
         Write-Error $_ -ErrorAction Continue
+        continue
     }
 
-    Write-Host ("Creating Device Configuration Policy Assignments: {0}" -f $_.DisplayName) -ForegroundColor Green
+    Write-Host ("Creating Device Configuration Policy Assignments: {0}" -f $TemplatePolicy.DisplayName) -ForegroundColor Green
+    $DeviceConfigurationAssignments = @()
+    foreach ($Assignment in @($TemplatePolicy.assignments)) {
+        $GroupName = $Assignment.target.groupId
+        if ($GroupIdByName.ContainsKey($GroupName)) {
+            $ResolvedGroupId = [string]$GroupIdByName[$GroupName]
+            if ([string]::IsNullOrWhiteSpace($ResolvedGroupId)) {
+                Write-Warning ("Skipping assignment for unresolved group '{0}' in policy '{1}'." -f $GroupName, $TemplatePolicy.DisplayName)
+                $SkipPolicy = $true
+                continue
+            }
 
-    $DeviceConfigurationAssignmentsRequestBody = $_ | Select-Object -Property assignments
-    $DeviceConfigurationAssignmentsRequestBody.assignments | ForEach-Object -Process {
-        # Set the group ID for the assignment
-        if ($_.target.groupId -eq "All Azure Virtual Desktop Hosts") {
-            $_.target.groupId = $AvdHostGroup.id
+            $DeviceConfigurationAssignments += @(
+                @{
+                    target = @{
+                        "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                        groupId = $ResolvedGroupId
+                    }
+                }
+            )
         }
-        elseif ($_.target.groupId -eq "All Users") {
-            $_.target.groupId = $AllUsersGroup.id
-        }
-        elseif ($_.target.groupId -eq "All Windows 10 and later Devices") {
-            $_.target.groupId = $AllWindows10Group.id
-        }
-        elseif ($_.target.groupId -eq "GPU-optimized Azure VMs") {
-            $_.target.groupId = $AvdGpuGroup.id
+        else {
+            Write-Warning ("Skipping assignment for unresolved group '{0}' in policy '{1}'." -f $GroupName, $TemplatePolicy.DisplayName)
+            $SkipPolicy = $true
         }
     }
+    if ($SkipPolicy) {
+        continue
+    }
 
-    # Convert the PowerShell object to JSON
-    $DeviceConfigurationAssignmentsRequestBody = $DeviceConfigurationAssignmentsRequestBody | ConvertTo-Json -Depth 100
-
-    
-    # Create the assignments
+    $DeviceConfigurationAssignmentsRequestBodyObject = @{
+        assignments = @($DeviceConfigurationAssignments)
+    }
+    $DeviceConfigurationAssignmentsRequestBody = $DeviceConfigurationAssignmentsRequestBodyObject | ConvertTo-Json -Depth 100
     try {
-        $DeviceConfigurationAssignment = Invoke-MgGraphRequest -Method POST -body $DeviceConfigurationAssignmentsRequestBody.toString() -Uri ("{0}/deviceManagement/deviceConfigurations/{1}/assign" -f $ApiVersion, $DeviceConfiguration.id) -ErrorAction Stop
-        
+        Invoke-MgGraphRequest -Method POST -Body $DeviceConfigurationAssignmentsRequestBody.ToString() -Uri ("{0}/deviceManagement/deviceConfigurations/{1}/assign" -f $ApiVersion, $DeviceConfigurationId) -ErrorAction Stop | Out-Null
     }
     catch {
-        Write-Verbose ("{0} - Failed to create Device Configuration Assignment(s)" -f $_.DisplayName) -Verbose
+        Write-Verbose ("{0} - Failed to create Device Configuration Assignment(s)" -f $TemplatePolicy.DisplayName) -Verbose
+        Write-Verbose ("Payload: {0}" -f $DeviceConfigurationAssignmentsRequestBody) -Verbose
         Write-Error $_ -ErrorAction Continue
     }
 }
 
-$SettingsCatalogPolicies | ForEach-Object -Process {
-    Write-Host ("Creating Settings Catalog Policy: {0}" -f $_.name) -ForegroundColor Green
+foreach ($SettingsPolicy in $SettingsCatalogPolicies) {
+    Write-Host ("Reviewing Settings Catalog Policy: {0}" -f $SettingsPolicy.name) -ForegroundColor Green
 
-    # Remove properties that are not available for creating a new configuration
-    $ConfigurationPolicyRequestBody = $_ | Select-Object -Property * -ExcludeProperty assignments | ConvertTo-Json -Depth 100
+    $SkipPolicy = $false
+    foreach ($Assignment in $SettingsPolicy.assignments) {
+        if (($Assignment.target.groupId -eq "GPU-optimized Azure VMs") -and (-not $GpuVms)) {
+            Write-Warning ("Skipping policy '{0}' because -GpuVms was not provided." -f $SettingsPolicy.name)
+            $SkipPolicy = $true
+            break
+        }
+    }
+    if ($SkipPolicy) {
+        continue
+    }
 
-    # Create the Settings Catalog Policy
+    $ConfigurationPolicyRequestBodyObject = $SettingsPolicy | Select-Object -Property * -ExcludeProperty assignments
+    $ConfigurationPolicyRequestBody = $ConfigurationPolicyRequestBodyObject | ConvertTo-Json -Depth 100
+
+    $ConfigurationPolicyId = $null
     try {
-        $ConfigurationPolicy = Invoke-MgGraphRequest -Method POST -Body $ConfigurationPolicyRequestBody.toString() -Uri ("{0}/deviceManagement/configurationPolicies" -f $ApiVersion) -ErrorAction Stop        
+        $ExistingConfigurationPolicy = Get-ExistingSettingsCatalogPolicy -Name $SettingsPolicy.name
+        if ($null -ne $ExistingConfigurationPolicy) {
+            # Settings catalog PATCH with nested settings often fails validation in USGov beta.
+            # Replace policy for consistent desired-state behavior.
+            Write-Host ("Replacing Settings Catalog Policy: {0}" -f $SettingsPolicy.name) -ForegroundColor Yellow
+            Invoke-MgGraphRequest -Method DELETE -Uri ("{0}/deviceManagement/configurationPolicies/{1}" -f $ApiVersion, $ExistingConfigurationPolicy.id) -ErrorAction Stop | Out-Null
+
+            $ConfigurationPolicy = Invoke-MgGraphRequest -Method POST -Body $ConfigurationPolicyRequestBody.ToString() -Uri ("{0}/deviceManagement/configurationPolicies" -f $ApiVersion) -ErrorAction Stop
+            $ConfigurationPolicyId = $ConfigurationPolicy.id
+            $script:SettingsCatalogPolicyByName[(Get-NormalizedPolicyName -Name $SettingsPolicy.name)] = [PSCustomObject]@{
+                id = $ConfigurationPolicyId
+                name = $SettingsPolicy.name
+            }
+        }
+        else {
+            Write-Host ("Creating Settings Catalog Policy: {0}" -f $SettingsPolicy.name) -ForegroundColor Green
+            $ConfigurationPolicy = Invoke-MgGraphRequest -Method POST -Body $ConfigurationPolicyRequestBody.ToString() -Uri ("{0}/deviceManagement/configurationPolicies" -f $ApiVersion) -ErrorAction Stop
+            $ConfigurationPolicyId = $ConfigurationPolicy.id
+            $script:SettingsCatalogPolicyByName[(Get-NormalizedPolicyName -Name $SettingsPolicy.name)] = [PSCustomObject]@{
+                id = $ConfigurationPolicyId
+                name = $SettingsPolicy.name
+            }
+        }
     }
     catch {
-        Write-Verbose ("{0} - Failed to create Settings Catalog Policy" -f $_.name) -Verbose
+        Write-Verbose ("{0} - Failed to create/update Settings Catalog Policy" -f $SettingsPolicy.name) -Verbose
         Write-Error $_ -ErrorAction Continue
+        continue
     }
-    
-    Write-Host ("Creating Settings Catalog Policy Assignments: {0}" -f $_.name) -ForegroundColor Green
-    # Create the Settings Catalog Policy Assignments
-    $ConfigurationPolicyAssignmentsRequestBody = $_ | Select-Object -Property assignments
-    $ConfigurationPolicyAssignmentsRequestBody.assignments | ForEach-Object -Process {
-        # Set the group ID for the assignment
-        if ($_.target.groupId -eq "All Azure Virtual Desktop Hosts") {
-            $_.target.groupId = $AvdHostGroup.id
-        }
-        elseif ($_.target.groupId -eq "All Users") {
-            $_.target.groupId = $AllUsersGroup.id
-        }
-        elseif ($_.target.groupId -eq "All Windows 10 and later Devices") {
-            $_.target.groupId = $AllWindows10Group.id
-        }
-        elseif ($_.target.groupId -eq "GPU-optimized Azure VMs") {
-            $_.target.groupId = $AvdGpuGroup.id
-        }
-    }
-    
-    # Convert the PowerShell object to JSON
-    $ConfigurationPolicyAssignmentsRequestBody = $ConfigurationPolicyAssignmentsRequestBody | ConvertTo-Json -Depth 100        
 
-    # Create the assignments
+    Write-Host ("Creating Settings Catalog Policy Assignments: {0}" -f $SettingsPolicy.name) -ForegroundColor Green
+    $ConfigurationPolicyAssignments = @()
+    foreach ($Assignment in @($SettingsPolicy.assignments)) {
+        $GroupName = $Assignment.target.groupId
+        if ($GroupIdByName.ContainsKey($GroupName)) {
+            $ResolvedGroupId = [string]$GroupIdByName[$GroupName]
+            if ([string]::IsNullOrWhiteSpace($ResolvedGroupId)) {
+                Write-Warning ("Skipping assignment for unresolved group '{0}' in policy '{1}'." -f $GroupName, $SettingsPolicy.name)
+                $SkipPolicy = $true
+                continue
+            }
+
+            $ConfigurationPolicyAssignments += @(
+                @{
+                    target = @{
+                        "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                        groupId = $ResolvedGroupId
+                        deviceAndAppManagementAssignmentFilterType = [string]$Assignment.target.deviceAndAppManagementAssignmentFilterType
+                    }
+                }
+            )
+        }
+        else {
+            Write-Warning ("Skipping assignment for unresolved group '{0}' in policy '{1}'." -f $GroupName, $SettingsPolicy.name)
+            $SkipPolicy = $true
+        }
+    }
+    if ($SkipPolicy) {
+        continue
+    }
+
+    $ConfigurationPolicyAssignmentsRequestBodyObject = @{
+        assignments = @($ConfigurationPolicyAssignments)
+    }
+    $ConfigurationPolicyAssignmentsRequestBody = $ConfigurationPolicyAssignmentsRequestBodyObject | ConvertTo-Json -Depth 100
     try {
-        $ConfigurationPolicyAssignments = Invoke-MgGraphRequest -method POST -body $ConfigurationPolicyAssignmentsRequestBody.toString() -Uri ("{0}/deviceManagement/configurationPolicies/{1}/assign" -f $ApiVersion, $ConfigurationPolicy.id) -ErrorAction Stop
+        Invoke-MgGraphRequest -Method POST -Body $ConfigurationPolicyAssignmentsRequestBody.ToString() -Uri ("{0}/deviceManagement/configurationPolicies/{1}/assign" -f $ApiVersion, $ConfigurationPolicyId) -ErrorAction Stop | Out-Null
     }
     catch {
-        Write-Verbose "$($configurationPolicyObject.name) - Failed to restore Settings Catalog Assignment(s)" -Verbose
+        Write-Verbose ("{0} - Failed to create Settings Catalog Assignment(s)" -f $SettingsPolicy.name) -Verbose
+        Write-Verbose ("Payload: {0}" -f $ConfigurationPolicyAssignmentsRequestBody) -Verbose
         Write-Error $_ -ErrorAction Continue
     }
 }
