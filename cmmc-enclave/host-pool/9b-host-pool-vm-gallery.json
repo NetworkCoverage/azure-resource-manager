@@ -27,6 +27,17 @@
             },
             "defaultValue": "Pooled"
         },
+        "preferredAppGroupType": {
+            "type": "string",
+            "allowedValues": [
+                "Desktop",
+                "RemoteApp"
+            ],
+            "metadata": {
+                "description": "The preferred application group type to display. 'Desktop' will prioritize desktop application groups in the Azure portal, while 'RemoteApp' will prioritize remote application groups. This setting does not affect the actual application group types that are created or their functionality."
+            },
+            "defaultValue": "Desktop"
+        },
         "vmNumberOfInstances": {
             "type": "int",
             "metadata": {
@@ -178,6 +189,7 @@
         "runCommandsApiVersion": "2024-11-01",
         "hostPoolName": "[if(parameters('isManagementHostPool'), concat('mgmt-', resourceGroup().location, '-vdpool-1'), concat(parameters('customerShortName'), '-', resourceGroup().location, '-vdpool-1'))]",
         "isPooledHostPool": "[equals(parameters('hostPoolType'), 'Pooled')]",
+        "loadBalancerType": "[if(equals(parameters('hostPoolType'), 'Personal'),'Persistent', parameters('loadBalancerType'))]",
         "fslogixFileShareName": "fslogixprofiles",
         "runCommandSourceUri": "https://raw.githubusercontent.com/NetworkCoverage/azure-resource-manager/refs/heads/main/cmmc-enclave/virtual-machine/multi-session/scripts/Register-FsLogixStartupScript.ps1",
         "vmNamePrefix": "[if(parameters('isManagementHostPool'), 'mgmt-avd', concat(parameters('customerShortName'), '-avd'))]",
@@ -250,11 +262,14 @@
             "apiVersion": "[variables('hostPoolApiVersion')]",
             "location": "[resourceGroup().location]",
             "properties": {
+                "hostPoolType": "[parameters('hostPoolType')]",
+                "loadBalancerType": "[variables('loadBalancerType')]",
+                "preferredAppGroupType": "[parameters('preferredAppGroupType')]",
                 "registrationInfo": {
                     "expirationTime": "[dateTimeAdd(parameters('utcTime'), 'P9D')]",
                     "registrationTokenOperation": "Update"
                 },
-                "vmTemplate": "[string(variables('vmTemplate'))]"            
+                "vmTemplate": "[string(variables('vmTemplate'))]"         
             }
         },
         {

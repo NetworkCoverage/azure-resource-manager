@@ -243,6 +243,10 @@
         "hostPoolName": {
             "type": "string",
             "value": "[variables('hostPoolName')]"
+        },
+        "preferredAppGroupType": {
+            "type": "string",
+            "value": "[parameters('preferredAppGroupType')]"
         }
     }
 }

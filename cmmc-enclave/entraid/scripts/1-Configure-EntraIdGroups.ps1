@@ -92,22 +92,36 @@ $GroupSets = @{
         ComplianceGroup = @{
             DisplayName = "Compliance PIM Eligible Role Assignments"
             Description = "Members of this group will be assigned administrative roles for the Compliance team via PIM."
-            Roles = @("User Administrator", "Authentication Administrator", "Cloud App Security Administrator", "Security Administrator", "Groups Administrator", "Global Reader")
+            Roles = @("User Administrator", "Authentication Administrator", "Cloud App Security Administrator", "Cloud Application Administrator", "Security Administrator", "Groups Administrator", "Global Reader")
         }
         SecOpsGroup = @{
             DisplayName = "Security Operations PIM Eligible Role Assignments"
             Description = "Members of this group will be assigned administrative roles for the Security Operations team via PIM."
-            Roles = @("Security Operator", "User Administrator", "Authentication Administrator", "Intune Administrator", "Exchange Administrator", "Global Reader")
+            Roles = @(
+                "Authentication Administrator", 
+                "Intune Administrator", 
+                "Privileged Authentication Administrator", 
+                "SharePoint Administrator", 
+                "Groups Administrator", 
+                "License Administrator", 
+                "Compliance Administrator", 
+                "Cloud Application Administrator", 
+                "Cloud App Security Administrator", 
+                "Security Administrator", 
+                "User Administrator", 
+                "Groups Administrator",
+                "Global Reader"
+            )
         }
         EscalationEngineersGroup = @{
             DisplayName = "Escalation Engineers PIM Eligible Role Assignments"
             Description = "Members of this group will be assigned administrative roles for the escalation engineering team via PIM."
-            Roles = @("Cloud App Security Operator", "Security Administrator", "Intune Administrator", "Authentication Administrator", "Global Reader")
+            Roles = @("Cloud App Security Operator", "Cloud Application Administrator", "Security Administrator", "Intune Administrator", "Authentication Administrator", "Global Reader")
         }
         SecEngGroup = @{
             DisplayName = "Security Engineering PIM Eligible Role Assignments"
             Description = "Members of this group will be assigned administrative roles for the Security Engineering team via PIM."
-            Roles = @("Cloud Application Administrator", "Cloud App Security Administrator", "Security Administrator", "Global Reader")
+             Roles = @("Cloud Application Administrator", "Cloud App Security Administrator", "Security Administrator", "User Administrator", "Global Reader")
         }
         GlobalAdminGroup = @{
             DisplayName = "Global Admin PIM Eligible Role Assignments"

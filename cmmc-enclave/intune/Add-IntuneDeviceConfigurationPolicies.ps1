@@ -1727,7 +1727,7 @@ $TemplatePolicies | ForEach-Object -Process {
 
     # Create the assignments
     try {
-        $DeviceConfigurationAssignment = Invoke-MgGraphRequest -Method POST -body $DeviceConfigurationAssignmentsRequestBody.toString() -Uri ("{0}}/deviceManagement/deviceConfigurations/{1}/assign" -f $ApiVersion, $DeviceConfiguration.id) -ErrorAction Stop
+        $DeviceConfigurationAssignment = Invoke-MgGraphRequest -Method POST -body $DeviceConfigurationAssignmentsRequestBody.toString() -Uri ("{0}/deviceManagement/deviceConfigurations/{1}/assign" -f $ApiVersion, $DeviceConfiguration.id) -ErrorAction Stop
         
     }
     catch {
