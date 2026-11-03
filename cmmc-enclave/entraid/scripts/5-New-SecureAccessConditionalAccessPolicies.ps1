@@ -27,7 +27,7 @@ param(
 }
 
 # Ensure proper Graph scopes are present
-$RequiredScopes = @("Policy.ReadWrite.ConditionalAccess", "Directory.Read.All")
+$RequiredScopes = @("Policy.Read.All","Policy.ReadWrite.ConditionalAccess", "Directory.Read.All")
 try {$Context = Get-MgContext} catch {$Context = $null}
 $ExistingScopes = if ($Context) {$Context.Scopes} else {@()}
 if (-not $Context -or ($RequiredScopes | Where-Object {$_ -notin $ExistingScopes})) {
