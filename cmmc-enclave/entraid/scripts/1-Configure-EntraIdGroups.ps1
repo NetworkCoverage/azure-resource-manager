@@ -75,6 +75,7 @@ $requiredLicenses = @(
     'ENTERPRISE_MOBILITY_S5*',      # Microsoft Entra ID Governance
     'AAD_GOV_PREMIUM_P2*'           # If you're in USGov and it's named differently
     'SPE_E5_USGOV_GCCHIGH*'         # USGov GCC High E5
+    'EMSPREMIUM_USGOV_GCCHIGH*'     # Compensates for lack of P2 Sku
 )
 
 if (-not ($licenses.SkuPartNumber -match ($requiredLicenses -join '|'))) {

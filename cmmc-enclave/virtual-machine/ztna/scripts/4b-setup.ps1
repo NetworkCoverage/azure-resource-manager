@@ -101,7 +101,7 @@ Write-Host 'Executing new-oidcapplication.ps1...'
 .\new-oidcapplication.ps1 -Environment USGov -ControllerDNSName $ControllerDnsName
 
 # Step 6: Parse appgate-iodc-app.json to retrieve Client ID
-$AppJsonPath = './appgate-iodc-app.json'
+$AppJsonPath = './appgate-oidc-app.json'
 if (-not (Test-Path $AppJsonPath)) {
     Write-Error "The OIDC application metadata file '$AppJsonPath' was not found."
     exit 1
